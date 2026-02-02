@@ -1,0 +1,9 @@
+{
+  "name": "GRAD+ Croatia Smart City Template",
+  "description": "A high-performance, Apple-inspired smart city platform for Croatian municipalities, featuring e-Građanin integration, idea incubation, and AI-powered citizen services.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}
