@@ -12,40 +12,54 @@
     :root {
       --city-primary: #004A99;
       --city-secondary: #CC0000;
+      --bg-primary: #f5f5f7;
+      --text-primary: #1d1d1f;
     }
+
+    [data-theme="dark"] {
+      --bg-primary: #0a0a0c;
+      --text-primary: #f5f5f7;
+    }
+
     body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      background-color: #f5f5f7;
-      color: #1d1d1f;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
       -webkit-font-smoothing: antialiased;
       overflow-x: hidden;
+      transition: background-color 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
     }
+
     .glass {
       background: rgba(255, 255, 255, 0.7);
       backdrop-filter: blur(25px) saturate(200%);
       -webkit-backdrop-filter: blur(25px) saturate(200%);
       border: 1px solid rgba(255, 255, 255, 0.3);
     }
-    .apple-ease {
-      transition: all 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+
+    [data-theme="dark"] .glass {
+      background: rgba(20, 20, 25, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.05);
     }
-    ::-webkit-scrollbar {
-      width: 6px;
+
+    .high-contrast {
+      filter: contrast(1.25) saturate(1.1);
     }
-    ::-webkit-scrollbar-track {
-      background: transparent;
+
+    .reduce-motion * {
+      animation: none !important;
+      transition: none !important;
     }
+
+    /* Custom scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb {
       background: rgba(0,0,0,0.1);
       border-radius: 10px;
     }
-    @keyframes subtle-float {
-      0% { transform: translateY(0px); }
-      50% { transform: translateY(-10px); }
-      100% { transform: translateY(0px); }
-    }
-    .float-animation {
-      animation: subtle-float 6s ease-in-out infinite;
+    [data-theme="dark"] ::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,0.1);
     }
   </style>
 <script type="importmap">

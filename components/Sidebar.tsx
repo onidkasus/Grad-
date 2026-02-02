@@ -12,6 +12,7 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, userRole, cityTheme }) => {
   const citizenItems = [
     { id: 'dashboard', icon: 'dashboard', label: 'Pregled' },
+    { id: 'vault', icon: 'lock', label: 'Digitalni Sef' },
     { id: 'fiscal', icon: 'account_balance', label: 'Gradski Proračun' },
     { id: 'inspection', icon: 'manage_search', label: 'Inspekcija Tvrtki' },
     { id: 'challenges', icon: 'location_city', label: 'Gradski Izazovi' },

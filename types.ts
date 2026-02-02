@@ -166,3 +166,13 @@ export interface CompanyData {
   directors: string[];
   financials: { year: number; income: number; expenses: number; profit: number; employees: number }[];
 }
+
+export interface DigitalDocument {
+  id: string;
+  title: string;
+  category: string;
+  date: string;
+  issuer: string;
+  status: 'VERIFIED' | 'PENDING' | 'EXPIRED';
+  fileType: 'PDF' | 'IMAGE';
+}

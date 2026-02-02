@@ -1,7 +1,8 @@
 
 import React, { useState } from 'react';
-import { CITIES } from '../constants';
+import { motion, AnimatePresence } from 'framer-motion';
 import { CityConfig, User, Notification, UserRole } from '../types';
+import { CITIES } from '../constants';
 
 interface NavbarProps {
   user: User;
@@ -9,124 +10,190 @@ interface NavbarProps {
   onCityChange: (city: CityConfig) => void;
   onLogout: () => void;
   notifications: Notification[];
-  setNotifications: React.Dispatch<React.SetStateAction<Notification[]>>;
-  onToggleRole: () => void;
+  onClearNotifications: () => void;
   onSearch: (query: string) => void;
+  onToggleTheme: () => void;
+  onOpenAI: () => void;
+  onOpenAccessibility: () => void;
+  currentTheme: 'light' | 'dark';
 }
 
 const Navbar: React.FC<NavbarProps> = ({ 
-  user, 
-  selectedCity, 
-  onCityChange, 
-  onLogout, 
-  notifications, 
-  setNotifications,
-  onToggleRole,
-  onSearch
+  user, selectedCity, onCityChange, onLogout, notifications, onClearNotifications,
+  onSearch, onToggleTheme, onOpenAI, onOpenAccessibility, currentTheme
 }) => {
-  const [showNotifs, setShowNotifs] = useState(false);
+  const [showCityPicker, setShowCityPicker] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const spring = { type: "spring", stiffness: 400, damping: 40 } as const;
+
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  const markAllRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-  };
-
   return (
-    <header data-tour="navbar" className="sticky top-0 z-50 h-24 bg-white/50 backdrop-blur-2xl border-b border-gray-100/50 px-8 flex items-center justify-between">
-      <div className="flex items-center gap-8">
-        <div className="relative group">
-          <select 
-            value={selectedCity.id}
-            onChange={(e) => {
-              const city = CITIES.find(c => c.id === e.target.value);
-              if (city) onCityChange(city);
-            }}
-            className="appearance-none bg-white border border-gray-200 text-sm font-black rounded-2xl outline-none block w-full px-6 py-3.5 pr-12 cursor-pointer transition-all hover:shadow-xl uppercase tracking-widest focus:ring-4"
-            style={{ color: selectedCity.theme.primary, '--tw-ring-color': `${selectedCity.theme.primary}20` } as any}
+    <header 
+      data-tour="navbar"
+      className={`sticky top-0 z-[100] h-24 border-b px-8 md:px-12 flex items-center justify-between transition-all duration-500 shadow-sm ${
+        currentTheme === 'light' 
+        ? 'bg-white/80 border-gray-100 text-gray-900' 
+        : 'bg-[#0a0a0c]/80 border-white/5 text-white'
+      } backdrop-blur-3xl`}
+    >
+      <div className="flex items-center gap-12">
+        <div className="relative">
+          <button 
+            onClick={() => setShowCityPicker(!showCityPicker)}
+            className="flex items-center gap-4 group text-left outline-none"
           >
-            {CITIES.map(city => (
-              <option key={city.id} value={city.id}>GRAD {city.name.toUpperCase()}</option>
-            ))}
-          </select>
-          <span className="material-icons-round absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none transition-transform group-hover:translate-y-[-40%]">expand_more</span>
+             <motion.div 
+               whileHover={{ rotate: 5, scale: 1.05 }}
+               className="w-12 h-12 rounded-[1.4rem] flex items-center justify-center text-white shadow-2xl transition-all" 
+               style={{ backgroundColor: selectedCity.theme.primary }}
+             >
+                <span className="material-icons-round text-2xl">{selectedCity.theme.culturalIcon}</span>
+             </motion.div>
+             <div>
+                <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.4em] leading-none mb-1.5 flex items-center gap-1">
+                  RH • Regija {selectedCity.name} <span className="material-icons-round text-[10px] group-hover:translate-y-0.5 transition-transform text-blue-600">expand_more</span>
+                </p>
+                <h2 className="text-lg font-black tracking-tighter leading-none">{selectedCity.name.toUpperCase()}</h2>
+             </div>
+          </button>
+
+          <AnimatePresence>
+            {showCityPicker && (
+              <>
+                <div className="fixed inset-0 z-[-1]" onClick={() => setShowCityPicker(false)} />
+                <motion.div 
+                  initial={{ opacity: 0, y: 15, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 15, scale: 0.95 }}
+                  transition={spring}
+                  className={`absolute top-24 left-0 w-[480px] p-6 rounded-[3rem] shadow-[0_40px_80px_-15px_rgba(0,0,0,0.2)] border overflow-hidden ${
+                    currentTheme === 'light' ? 'bg-white border-gray-100' : 'bg-gray-900 border-white/10'
+                  }`}
+                >
+                  <p className="px-4 py-2 text-[9px] font-black text-gray-400 uppercase tracking-[0.5em] mb-6">Administracija Regija (7)</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    {CITIES.map(city => (
+                      <button 
+                        key={city.id}
+                        onClick={() => { onCityChange(city); setShowCityPicker(false); }}
+                        className={`group w-full flex items-center gap-4 px-5 py-4 rounded-2xl transition-all ${
+                          selectedCity.id === city.id 
+                          ? 'bg-blue-600 shadow-xl' 
+                          : 'hover:bg-gray-50 dark:hover:bg-white/5 border border-transparent'
+                        }`}
+                      >
+                         <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white shrink-0 shadow-md ${selectedCity.id === city.id ? 'bg-white/20' : ''}`} style={{ backgroundColor: selectedCity.id === city.id ? undefined : city.theme.primary }}>
+                           <span className="material-icons-round text-lg">{city.theme.culturalIcon}</span>
+                         </div>
+                         <div className="text-left">
+                            <span className={`block text-[11px] font-black uppercase tracking-widest ${selectedCity.id === city.id ? 'text-white' : 'text-gray-900 dark:text-white'}`}>{city.name}</span>
+                            <span className={`text-[8px] font-bold uppercase ${selectedCity.id === city.id ? 'text-white/60' : 'text-gray-400'}`}>HR • 0{CITIES.indexOf(city) + 1}</span>
+                         </div>
+                      </button>
+                    ))}
+                  </div>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
         </div>
 
-        <div className="relative hidden md:block">
-           <span className="material-icons-round absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">search</span>
+        <div className="relative hidden xl:block">
+           <span className="material-icons-round absolute left-5 top-1/2 -translate-y-1/2 text-gray-300">search</span>
            <input 
              onChange={(e) => onSearch(e.target.value)}
-             placeholder="Pretraži sustav grada..."
-             className="pl-12 pr-6 py-3.5 bg-gray-50/50 rounded-2xl border border-transparent text-sm focus:bg-white focus:border-gray-200 transition-all w-64 focus:w-96 outline-none font-medium shadow-inner"
+             placeholder="Traži gradske resurse..."
+             className={`pl-14 pr-8 py-4 rounded-2xl border text-[10px] transition-all w-64 focus:w-80 outline-none font-black uppercase tracking-widest ${
+               currentTheme === 'light'
+               ? 'bg-gray-100/50 border-transparent focus:bg-white focus:border-gray-200'
+               : 'bg-white/5 border-transparent focus:bg-white/10 focus:border-white/10'
+             }`}
            />
         </div>
       </div>
 
       <div className="flex items-center gap-6">
-        <button 
-          onClick={onToggleRole}
-          className="px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-3 border shadow-sm group hover:scale-105 active:scale-95"
-          style={{ 
-            backgroundColor: user.role === UserRole.ADMIN ? selectedCity.theme.primary : 'white',
-            color: user.role === UserRole.ADMIN ? 'white' : selectedCity.theme.primary,
-            borderColor: `${selectedCity.theme.primary}20`
-          }}
-        >
-          <span className="material-icons-round text-sm">{user.role === UserRole.ADMIN ? 'shield' : 'admin_panel_settings'}</span>
-          {user.role === UserRole.CITIZEN ? 'Admin Sučelje' : 'Pogled Građana'}
-        </button>
+        <div className={`flex p-1.5 rounded-2xl gap-1 ${currentTheme === 'light' ? 'bg-gray-100/50' : 'bg-white/5'}`}>
+          {/* Notifications Bell */}
+          <div className="relative">
+            <button 
+              onClick={() => setShowNotifications(!showNotifications)}
+              className={`w-11 h-11 rounded-xl flex items-center justify-center hover:bg-white dark:hover:bg-white/10 transition-all ${unreadCount > 0 ? 'text-blue-600' : 'text-gray-400'}`}
+            >
+              <span className={`material-icons-round text-xl ${unreadCount > 0 ? 'animate-bounce' : ''}`}>notifications</span>
+              {unreadCount > 0 && (
+                <motion.span 
+                  initial={{ scale: 0.5 }}
+                  animate={{ scale: [1, 1.2, 1] }}
+                  transition={{ repeat: Infinity, duration: 1 }}
+                  className="absolute top-2 right-2 w-4 h-4 bg-red-500 text-white text-[8px] font-black flex items-center justify-center rounded-full border-2 border-white dark:border-gray-900"
+                >
+                  {unreadCount}
+                </motion.span>
+              )}
+            </button>
 
-        <div className="relative">
-          <button 
-            onClick={() => setShowNotifs(!showNotifs)}
-            className="w-12 h-12 rounded-2xl bg-white border border-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-900 transition-all relative group"
-          >
-            <span className="material-icons-round text-2xl group-hover:rotate-12 transition-transform" style={{ color: unreadCount > 0 ? selectedCity.theme.primary : 'inherit' }}>notifications</span>
-            {unreadCount > 0 && <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-white animate-bounce">{unreadCount}</span>}
-          </button>
-
-          {showNotifs && (
-            <div className="absolute right-0 mt-4 w-96 bg-white rounded-[2rem] shadow-2xl border border-gray-100 overflow-hidden z-50 animate-in slide-in-from-top-4">
-              <div className="p-6 border-b border-gray-50 flex justify-between items-center">
-                <h4 className="font-black text-sm uppercase tracking-widest text-gray-900">Obavijesti</h4>
-                <button onClick={markAllRead} className="text-[10px] font-black text-blue-600 hover:underline uppercase tracking-widest">Označi sve pročitano</button>
-              </div>
-              <div className="max-h-[400px] overflow-y-auto">
-                {notifications.length === 0 ? (
-                  <div className="p-10 text-center text-gray-400 font-medium italic">Nema novih obavijesti</div>
-                ) : (
-                  notifications.map(n => (
-                    <div key={n.id} className={`p-6 border-b border-gray-50 hover:bg-gray-50 transition-colors flex gap-4 ${n.read ? 'opacity-60' : ''}`}>
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                        n.type === 'SUCCESS' ? 'bg-green-100 text-green-600' : n.type === 'ALERT' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'
-                      }`}>
-                        <span className="material-icons-round text-sm">{n.type === 'SUCCESS' ? 'check_circle' : n.type === 'ALERT' ? 'warning' : 'info'}</span>
-                      </div>
-                      <div>
-                        <h5 className="font-black text-gray-900 text-sm">{n.title}</h5>
-                        <p className="text-xs text-gray-500 mt-1 leading-relaxed">{n.message}</p>
-                        <p className="text-[9px] font-black text-gray-300 uppercase mt-2">{n.time}</p>
-                      </div>
-                      {!n.read && <div className="w-2 h-2 rounded-full bg-blue-600 mt-2 flex-shrink-0"></div>}
+            <AnimatePresence>
+              {showNotifications && (
+                <>
+                  <div className="fixed inset-0 z-[-1]" onClick={() => setShowNotifications(false)} />
+                  <motion.div
+                    initial={{ opacity: 0, y: 15, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 15, scale: 0.95 }}
+                    className={`absolute top-14 right-0 w-80 p-6 rounded-[2.5rem] shadow-2xl border ${
+                      currentTheme === 'light' ? 'bg-white border-gray-100' : 'bg-gray-900 border-white/10'
+                    }`}
+                  >
+                    <div className="flex justify-between items-center mb-4 px-2">
+                       <h4 className="text-[10px] font-black uppercase tracking-widest">Obavijesti</h4>
+                       <button 
+                         onClick={() => { onClearNotifications(); setShowNotifications(false); }}
+                         className="text-[9px] text-blue-600 font-bold cursor-pointer hover:underline outline-none"
+                       >
+                         Označi pročitano
+                       </button>
                     </div>
-                  ))
-                )}
-              </div>
-              <button onClick={() => setShowNotifs(false)} className="w-full py-4 bg-gray-50 text-[10px] font-black text-gray-400 uppercase tracking-widest hover:bg-gray-100">Zatvori</button>
-            </div>
-          )}
+                    <div className="space-y-3 max-h-64 overflow-y-auto custom-scrollbar pr-2">
+                      {notifications.length === 0 ? (
+                        <div className="py-8 text-center text-gray-400 text-[10px] font-bold uppercase tracking-widest">Nema novih obavijesti</div>
+                      ) : (
+                        notifications.map(notif => (
+                          <div key={notif.id} className="p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-transparent hover:border-blue-500/20 transition-all">
+                             <div className="flex justify-between items-start mb-1">
+                               <p className="text-[11px] font-black tracking-tight leading-tight">{notif.title}</p>
+                               <span className="text-[8px] font-bold text-gray-400 shrink-0 ml-2">{notif.time}</span>
+                             </div>
+                             <p className="text-[10px] text-gray-500 leading-tight">{notif.message}</p>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
+          </div>
+
+          <button onClick={onOpenAI} className="w-11 h-11 rounded-xl flex items-center justify-center hover:bg-white dark:hover:bg-white/10 transition-all text-gray-400 hover:text-blue-600">
+            <span className="material-icons-round text-xl">psychology</span>
+          </button>
+          <button onClick={onToggleTheme} className="w-11 h-11 rounded-xl flex items-center justify-center hover:bg-white dark:hover:bg-white/10 transition-all text-gray-400">
+            <span className="material-icons-round text-xl">{currentTheme === 'light' ? 'dark_mode' : 'light_mode'}</span>
+          </button>
         </div>
 
-        <div className="h-10 w-[1px] bg-gray-200 hidden sm:block"></div>
-
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 pl-6 border-l border-gray-100 dark:border-white/10">
           <div className="text-right hidden sm:block">
-            <p className="text-sm font-black text-gray-900 leading-tight tracking-tight">{user.name}</p>
-            <p className="text-[9px] font-black uppercase tracking-widest opacity-60" style={{ color: selectedCity.theme.primary }}>{user.role}</p>
+            <p className="text-xs font-black tracking-tight leading-none uppercase">{user.name}</p>
+            <p className="text-[8px] font-black uppercase tracking-widest opacity-30 mt-1">
+              {user.role === UserRole.ADMIN ? 'Sustav Nadzornik' : user.rank}
+            </p>
           </div>
           <button 
             onClick={onLogout}
-            className="w-12 h-12 rounded-2xl flex items-center justify-center text-white font-black shadow-2xl hover:-translate-y-1 transition-all"
-            style={{ background: `linear-gradient(135deg, ${selectedCity.theme.primary}, ${selectedCity.theme.secondary})` }}
+            className="w-12 h-12 rounded-[1.4rem] flex items-center justify-center text-white font-black shadow-2xl hover:scale-105 active:scale-95 transition-all bg-black text-xs"
           >
             {user.avatar}
           </button>

@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface OnboardingProps {
@@ -17,79 +16,126 @@ interface Step {
 const steps: Step[] = [
   { 
     title: 'Dobrodošli na GRAD+', 
-    text: 'Vaša nova destinacija za izravnu suradnju s gradskom upravom. Krenimo u kratki obilazak!', 
+    text: 'Vaša nova destinacija za izravnu suradnju s gradskom upravom. OD GRAĐANA ZA GRAĐANE!', 
     icon: 'auto_awesome',
     targetId: 'center'
   },
   { 
     title: 'Digitalni Uredi', 
-    text: 'S lijeve strane nalazi se vaša navigacija. Ovdje pristupate proračunu, inkubatoru i AI provjeri činjenica.', 
+    text: 'S lijeve strane nalazi se vaša navigacija. Ovdje pristupate proračunu, e-Sefu i AI provjeri činjenica.', 
     icon: 'menu_open',
     targetId: 'sidebar'
   },
   { 
     title: 'Upravljački Sustav', 
-    text: 'Ovdje možete brzo mijenjati gradove, pretraživati bazu ili se prebaciti u Admin pogled.', 
+    text: 'Gornji izbornik služi za brzu promjenu gradova, pretragu i pristup postavkama.', 
     icon: 'tune',
     targetId: 'navbar'
   },
   { 
-    title: 'Vaš Fokus', 
-    text: 'Na vrhu uvijek vidite personaliziranu poruku i status online gradskih sustava.', 
-    icon: 'dashboard_customize',
-    targetId: 'header'
-  },
-  { 
     title: 'Impact Score', 
-    text: 'Pratite svoj doprinos zajednici u realnom vremenu. Vaš rang raste sa svakom inovacijom!', 
+    text: 'Ovdje pratite svoj doprinos zajednici. Vaš rang raste sa svakom podijeljenom idejom!', 
     icon: 'bolt',
     targetId: 'kpis'
   },
   { 
     title: 'Pametna Podrška', 
-    text: 'Zapeli ste? Naš AI asistent je dostupan 24/7 za sva pitanja o digitalnom gradu.', 
+    text: 'Ako zapnete, AI asistent je dostupan ovdje za sva vaša pitanja u bilo kojem trenutku.', 
     icon: 'smart_toy',
     targetId: 'ai-chat'
   }
 ];
 
-const SpotlightOverlay = ({ rect }: { rect: DOMRect | null }) => {
-  if (!rect) return <div className="fixed inset-0 bg-gray-950/80 z-[201]" />;
+const tooltipSpring = { type: 'spring', stiffness: 400, damping: 40, mass: 0.5 } as const;
 
-  const { x, y, width, height } = rect;
-  const padding = 10;
-  
-  // Create an SVG path for a full-screen rectangle with a hole cut out
-  const path = `M 0,0 H 100% V 100% H 0 Z M ${x - padding},${y - padding} v ${height + padding * 2} h ${width + padding * 2} v ${-(height + padding * 2)} z`;
-
+const SpotlightOverlay: React.FC<{ rect: DOMRect | null }> = ({ rect }) => {
   return (
-    <svg className="fixed inset-0 w-full h-full z-[201] pointer-events-none fill-gray-950/80 backdrop-blur-[2px] transition-all duration-500">
-      <path d={path} fillRule="evenodd" />
-    </svg>
+    <div className="fixed inset-0 z-[900] pointer-events-none overflow-hidden">
+      <svg className="w-full h-full">
+        <defs>
+          <mask id="spotlight-mask">
+            <rect width="100%" height="100%" fill="white" />
+            <motion.rect 
+              initial={false}
+              animate={{
+                x: rect ? rect.left - 10 : window.innerWidth / 2,
+                y: rect ? rect.top - 10 : window.innerHeight / 2,
+                width: rect ? rect.width + 20 : 0,
+                height: rect ? rect.height + 20 : 0,
+                rx: 24
+              }}
+              // MUST be 0 duration for position to prevent lagging during active scroll
+              transition={{ duration: 0 }} 
+              fill="black" 
+            />
+          </mask>
+        </defs>
+        <rect 
+          width="100%" 
+          height="100%" 
+          fill="rgba(0,0,0,0.8)" 
+          mask="url(#spotlight-mask)" 
+          className="backdrop-blur-[3px]"
+        />
+      </svg>
+      
+      <motion.div
+        initial={false}
+        animate={{
+          opacity: rect ? 1 : 0,
+          top: rect ? rect.top - 14 : '50%',
+          left: rect ? rect.left - 14 : '50%',
+          width: rect ? rect.width + 28 : 0,
+          height: rect ? rect.height + 28 : 0,
+        }}
+        transition={{ duration: 0 }}
+        className="absolute border-2 border-white/50 rounded-[2rem] shadow-[0_0_80px_rgba(255,255,255,0.3)]"
+      />
+    </div>
   );
 };
 
 const Onboarding: React.FC<OnboardingProps> = ({ onFinish, primaryColor }) => {
   const [step, setStep] = useState(0);
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
+  const requestRef = useRef<number>(null);
+
+  const updateRect = useCallback(() => {
+    const targetId = steps[step].targetId;
+    if (targetId === 'center') {
+      if (targetRect !== null) setTargetRect(null);
+      return;
+    }
+    const el = document.querySelector(`[data-tour="${targetId}"]`);
+    if (el) {
+      const newRect = el.getBoundingClientRect();
+      // Optimization: Only update if changed
+      if (!targetRect || newRect.top !== targetRect.top || newRect.left !== targetRect.left) {
+        setTargetRect(newRect);
+      }
+    }
+  }, [step, targetRect]);
+
+  const animate = useCallback(() => {
+    updateRect();
+    requestRef.current = requestAnimationFrame(animate);
+  }, [updateRect]);
+
+  useEffect(() => {
+    requestRef.current = requestAnimationFrame(animate);
+    window.addEventListener('resize', updateRect);
+    return () => {
+      if (requestRef.current) cancelAnimationFrame(requestRef.current);
+      window.removeEventListener('resize', updateRect);
+    };
+  }, [animate, updateRect]);
 
   useEffect(() => {
     const targetId = steps[step].targetId;
-    if (targetId === 'center') {
-      setTargetRect(null);
-      return;
-    }
-
-    const updateRect = () => {
+    if (targetId !== 'center') {
       const el = document.querySelector(`[data-tour="${targetId}"]`);
-      if (el) {
-        setTargetRect(el.getBoundingClientRect());
-      }
-    };
-
-    updateRect();
-    window.addEventListener('resize', updateRect);
-    return () => window.removeEventListener('resize', updateRect);
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
   }, [step]);
 
   const handleNext = () => {
@@ -100,104 +146,80 @@ const Onboarding: React.FC<OnboardingProps> = ({ onFinish, primaryColor }) => {
     }
   };
 
-  // Determine card position based on target
-  const getCardPosition = () => {
-    if (!targetRect) return {};
-    const margin = 20;
-    const { x, y, width, height } = targetRect;
-    
-    // Logic for finding best side to place the card
-    if (steps[step].targetId === 'sidebar') return { left: `${x + width + margin}px`, top: '150px' };
-    if (steps[step].targetId === 'navbar') return { top: `${y + height + margin}px`, left: '50%', transform: 'translateX(-50%)' };
-    if (steps[step].targetId === 'header') return { bottom: '50px', left: '50%', transform: 'translateX(-50%)' };
-    if (steps[step].targetId === 'ai-chat') return { bottom: '150px', right: '100px' };
-    if (steps[step].targetId === 'kpis') return { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' };
-    
-    return {};
+  const getVerticalAlignment = () => {
+    if (!targetRect) return 'justify-center';
+    const screenHeight = window.innerHeight;
+    const targetCenterY = targetRect.top + targetRect.height / 2;
+    return targetCenterY < screenHeight / 2 ? 'justify-end pb-48' : 'justify-start pt-48';
   };
 
   return (
-    <div className="fixed inset-0 z-[200] overflow-hidden">
-      <AnimatePresence>
-        <SpotlightOverlay key={`spotlight-${step}`} rect={targetRect} />
-      </AnimatePresence>
+    <div className="fixed inset-0 z-[950] overflow-hidden pointer-events-none">
+      <SpotlightOverlay rect={targetRect} />
 
-      <div className="fixed inset-0 z-[205] pointer-events-none">
-        <AnimatePresence mode="wait">
-          {targetRect && (
-            <motion.div 
-              key={`arrow-${step}`}
-              initial={{ opacity: 0, scale: 0 }}
-              animate={{ opacity: 1, scale: 1, y: [0, -15, 0] }}
-              exit={{ opacity: 0, scale: 0 }}
-              transition={{ 
-                y: { duration: 1, repeat: Infinity, ease: "easeInOut" },
-                duration: 0.3 
-              }}
-              className="absolute pointer-events-none"
-              style={{ 
-                top: `${targetRect.top + targetRect.height / 2 - 80}px`,
-                left: `${targetRect.left + targetRect.width / 2 - 20}px`
-              }}
-            >
-              <div className="flex flex-col items-center">
-                 <div className="bg-white p-3 rounded-full shadow-2xl border-4" style={{ borderColor: primaryColor }}>
-                   <span className="material-icons-round text-3xl" style={{ color: primaryColor }}>south</span>
-                 </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
+      <motion.div 
+        layout
+        transition={tooltipSpring}
+        className={`absolute inset-0 z-[1000] flex flex-col items-center p-6 ${getVerticalAlignment()}`}
+      >
         <motion.div 
-          key={step}
-          initial={{ opacity: 0, scale: 0.9, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.9, y: -20 }}
-          className="absolute z-[210] pointer-events-auto bg-white rounded-[3rem] p-10 max-w-md w-full text-center shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] border border-white/20"
-          style={targetRect ? getCardPosition() : { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}
+          layout
+          transition={tooltipSpring}
+          className="pointer-events-auto bg-white rounded-[3rem] p-10 max-w-sm w-full shadow-[0_50px_100px_-20px_rgba(0,0,0,0.3)] border border-white flex flex-col items-center text-center overflow-hidden"
         >
-          <div 
-            className="w-20 h-20 rounded-2xl flex items-center justify-center text-white mx-auto mb-8 shadow-xl" 
-            style={{ background: `linear-gradient(135deg, ${primaryColor}, #1d1d1f)` }}
-          >
-            <span className="material-icons-round text-4xl">{steps[step].icon}</span>
-          </div>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={step}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              transition={{ duration: 0.2 }}
+              className="flex flex-col items-center w-full"
+            >
+              <div 
+                className="w-16 h-16 rounded-2xl flex items-center justify-center text-white mb-8 shadow-xl" 
+                style={{ background: `linear-gradient(135deg, ${primaryColor}, #1d1d1f)` }}
+              >
+                <span className="material-icons-round text-3xl">{steps[step].icon}</span>
+              </div>
 
-          <h2 className="text-2xl font-black text-gray-900 mb-3 tracking-tighter">{steps[step].title}</h2>
-          <p className="text-gray-500 font-medium mb-8 leading-relaxed text-sm">{steps[step].text}</p>
+              <h2 className="text-xl font-black text-gray-900 mb-3 tracking-tight">{steps[step].title}</h2>
+              <p className="text-gray-400 font-medium mb-10 leading-relaxed text-sm px-4">{steps[step].text}</p>
+            </motion.div>
+          </AnimatePresence>
           
-          <div className="flex justify-center gap-2 mb-8">
+          <div className="flex justify-center gap-2 mb-10">
             {steps.map((_, i) => (
               <motion.div 
                 key={i} 
+                layout
+                className="h-1 rounded-full" 
                 animate={{ 
-                  width: i === step ? 30 : 8,
+                  width: i === step ? 24 : 8,
                   backgroundColor: i === step ? primaryColor : '#f1f5f9'
                 }}
-                className="h-1.5 rounded-full transition-all" 
+                transition={tooltipSpring}
               />
             ))}
           </div>
 
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3 w-full">
             <button 
               onClick={handleNext}
-              className="w-full py-4 text-white font-black rounded-2xl shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all text-xs uppercase tracking-widest"
+              className="w-full py-5 text-white font-black rounded-2xl shadow-2xl transition-all text-[11px] uppercase tracking-widest active:scale-95 hover:brightness-110"
               style={{ backgroundColor: primaryColor }}
             >
-              {step === steps.length - 1 ? 'Kreni u Grad+' : 'Sljedeći Korak'}
+              {step === steps.length - 1 ? 'Lansiraj Platformu' : 'Sljedeći Korak'}
             </button>
-            
             <button 
               onClick={onFinish}
-              className="text-[9px] font-black text-gray-400 hover:text-gray-900 uppercase tracking-widest py-2"
+              className="text-[10px] font-black text-gray-300 hover:text-gray-900 uppercase tracking-widest py-2 transition-colors"
             >
-              Preskoči Obilazak
+              Preskoči Vodič
             </button>
           </div>
         </motion.div>
-      </div>
+      </motion.div>
     </div>
   );
 };

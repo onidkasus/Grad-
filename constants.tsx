@@ -34,17 +34,6 @@ export const CITIES: CityConfig[] = [
     }
   },
   { 
-    id: 'zadar', 
-    name: 'Zadar', 
-    theme: {
-      primary: '#1C3E95',
-      secondary: '#00B0F0',
-      accent: '#FFD700',
-      pattern: 'url("https://www.transparenttextures.com/patterns/cubes.png")',
-      culturalIcon: 'waves'
-    }
-  },
-  { 
     id: 'rijeka', 
     name: 'Rijeka', 
     theme: {
@@ -67,47 +56,36 @@ export const CITIES: CityConfig[] = [
     }
   },
   { 
-    id: 'dubrovnik', 
-    name: 'Dubrovnik', 
+    id: 'zadar', 
+    name: 'Zadar', 
     theme: {
-      primary: '#8B0000',
-      secondary: '#DAA520',
+      primary: '#1C3E95',
+      secondary: '#00B0F0',
+      accent: '#FFD700',
+      pattern: 'url("https://www.transparenttextures.com/patterns/cubes.png")',
+      culturalIcon: 'waves'
+    }
+  },
+  { 
+    id: 'velika_gorica', 
+    name: 'Velika Gorica', 
+    theme: {
+      primary: '#E53935',
+      secondary: '#B71C1C',
       accent: '#FFFFFF', 
       pattern: 'url("https://www.transparenttextures.com/patterns/gplay.png")',
-      culturalIcon: 'fort'
+      culturalIcon: 'airplane_ticket'
     }
   },
   { 
-    id: 'pula', 
-    name: 'Pula', 
+    id: 'slavonski_brod', 
+    name: 'Slavonski Brod', 
     theme: {
-      primary: '#2E7D32',
-      secondary: '#FDD835',
-      accent: '#FFFFFF', 
-      pattern: 'url("https://www.transparenttextures.com/patterns/cubes.png")',
-      culturalIcon: 'stadium'
-    }
-  },
-  { 
-    id: 'sibenik', 
-    name: 'Šibenik', 
-    theme: {
-      primary: '#1A237E',
-      secondary: '#4FC3F7',
+      primary: '#FB8C00',
+      secondary: '#E65100',
       accent: '#FFFFFF', 
       pattern: 'url("https://www.transparenttextures.com/patterns/natural-paper.png")',
-      culturalIcon: 'account_balance'
-    }
-  },
-  { 
-    id: 'varazdin', 
-    name: 'Varaždin', 
-    theme: {
-      primary: '#4E342E',
-      secondary: '#BDBDBD',
-      accent: '#FFFFFF', 
-      pattern: 'url("https://www.transparenttextures.com/patterns/carbon-fibre.png")',
-      culturalIcon: 'house'
+      culturalIcon: 'fort'
     }
   }
 ];

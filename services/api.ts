@@ -1,9 +1,7 @@
-
 import { User, Idea, Challenge, Poll, Notification, UserRole, IncubatorStage, Category, Post } from '../types';
-import { INITIAL_IDEAS, INITIAL_CHALLENGES, INITIAL_POLLS, BADGES } from '../constants';
+import { BADGES } from '../constants';
 
-// Simulated latency to mimic real-world network conditions
-const LATENCY = 600;
+const LATENCY = 1000;
 const delay = (ms: number = LATENCY) => new Promise(resolve => setTimeout(resolve, ms));
 
 const STORAGE_KEYS = {
@@ -16,58 +14,84 @@ const STORAGE_KEYS = {
   NOTIFICATIONS: 'grad_plus_notifications_db'
 };
 
-const INITIAL_POSTS: Post[] = [
-  {
-    id: 'p1',
-    userId: 'u2',
-    cityId: 'zadar',
-    author: 'Ivan Horvat',
-    authorAvatar: 'IH',
-    content: 'Što mislite o novoj regulaciji prometa u centru? Čini mi se da je gužva manja.',
-    likes: 15,
-    commentsCount: 3,
-    created_at: new Date(Date.now() - 86400000).toISOString(),
-    likedByCurrentUser: false
-  }
+// --- MASIVNA BAZA PODATAKA ---
+
+const INITIAL_CHALLENGES: Challenge[] = [
+  // ZAGREB
+  { id: 'c-zg-1', cityId: 'zagreb', title: "Zeleni prsten Sljemena", description: "Revitalizacija pješačkih staza uz pametnu rasvjetu i senzore za vlagu tla.", category: Category.ENVIRONMENT, progress: 30, deadline: "01.12.2024.", ideasCount: 5, priority: "Visoko", fund: "40.000 €", featured: true, created_at: new Date().toISOString() },
+  { id: 'c-zg-2', cityId: 'zagreb', title: "Smart Parking Donji Grad", description: "Sustav za detekciju slobodnih mjesta u realnom vremenu preko mobilne aplikacije.", category: Category.TRANSPORT, progress: 65, deadline: "15.10.2024.", ideasCount: 12, priority: "Kritično", fund: "85.000 €", featured: false, created_at: new Date().toISOString() },
+  { id: 'c-zg-3', cityId: 'zagreb', title: "Digitalni Vrtići", description: "Platforma za centralizirano upravljanje upisima i komunikaciju s roditeljima.", category: Category.EDUCATION, progress: 10, deadline: "01.09.2025.", ideasCount: 3, priority: "Srednje", fund: "25.000 €", featured: true, created_at: new Date().toISOString() },
+  
+  // SPLIT
+  { id: 'c-st-1', cityId: 'split', title: "Održivi Žnjan", description: "Implementacija pametnih tuševa s reciklažom vode i solarnih suncobrana.", category: Category.ENVIRONMENT, progress: 15, deadline: "15.08.2024.", ideasCount: 2, priority: "Srednje", fund: "30.000 €", featured: true, created_at: new Date().toISOString() },
+  { id: 'c-st-2', cityId: 'split', title: "Smart Riva Hub", description: "Postavljanje high-speed internet i info stupova za turiste i građane.", category: Category.TECHNOLOGY, progress: 80, deadline: "01.06.2024.", ideasCount: 9, priority: "Visoko", fund: "20.000 €", featured: false, created_at: new Date().toISOString() },
+  
+  // ZADAR
+  { id: 'c-zd-1', cityId: 'zadar', title: "Eko-Luka Gaženica", description: "Sustav za praćenje kvalitete mora i zraka u realnom vremenu.", category: Category.ENVIRONMENT, progress: 85, deadline: "01.06.2024.", ideasCount: 12, priority: "Kritično", fund: "60.000 €", featured: true, created_at: new Date().toISOString() },
+  { id: 'c-zd-2', cityId: 'zadar', title: "AI Morske Orgulje", description: "Sustav za prediktivno održavanje instalacija pomoću AI analize zvuka.", category: Category.TECHNOLOGY, progress: 45, deadline: "20.12.2024.", ideasCount: 4, priority: "Srednje", fund: "15.000 €", featured: false, created_at: new Date().toISOString() },
+
+  // RIJEKA
+  { id: 'c-ri-1', cityId: 'rijeka', title: "Industrijska Baština AR", description: "Proširena stvarnost za turističke ture kroz staru industrijsku zonu.", category: Category.TOURISM, progress: 55, deadline: "30.11.2024.", ideasCount: 8, priority: "Nisko", fund: "12.000 €", featured: true, created_at: new Date().toISOString() },
+  { id: 'c-ri-2', cityId: 'rijeka', title: "Startup Hub Torpedo", description: "Modernizacija prostora za IT inkubaciju i co-working.", category: Category.TECHNOLOGY, progress: 20, deadline: "01.03.2025.", ideasCount: 6, priority: "Visoko", fund: "120.000 €", featured: false, created_at: new Date().toISOString() },
+
+  // OSIJEK
+  { id: 'c-os-1', cityId: 'osijek', title: "Tramvaj 2.0", description: "AI optimizacija linija i uvođenje beskontaktnog plaćanja u cijeloj mreži.", category: Category.TRANSPORT, progress: 50, deadline: "20.10.2024.", ideasCount: 7, priority: "Visoko", fund: "100.000 €", featured: true, created_at: new Date().toISOString() },
+  { id: 'c-os-2', cityId: 'osijek', title: "Smart Drava Promenade", description: "Pametna rasvjeta koja štedi energiju detekcijom kretanja prolaznika.", category: Category.ENVIRONMENT, progress: 95, deadline: "01.05.2024.", ideasCount: 15, priority: "Srednje", fund: "35.000 €", featured: false, created_at: new Date().toISOString() },
 ];
 
-// Database Initializer
-const initializeDatabase = () => {
-  if (!localStorage.getItem(STORAGE_KEYS.IDEAS)) localStorage.setItem(STORAGE_KEYS.IDEAS, JSON.stringify(INITIAL_IDEAS));
-  if (!localStorage.getItem(STORAGE_KEYS.POSTS)) localStorage.setItem(STORAGE_KEYS.POSTS, JSON.stringify(INITIAL_POSTS));
-  if (!localStorage.getItem(STORAGE_KEYS.CHALLENGES)) localStorage.setItem(STORAGE_KEYS.CHALLENGES, JSON.stringify(INITIAL_CHALLENGES));
-  if (!localStorage.getItem(STORAGE_KEYS.POLLS)) localStorage.setItem(STORAGE_KEYS.POLLS, JSON.stringify(INITIAL_POLLS));
-  if (!localStorage.getItem(STORAGE_KEYS.NOTIFICATIONS)) localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify([]));
+const INITIAL_IDEAS: Idea[] = [
+  // ZAGREB
+  { id: 'i-zg-1', cityId: 'zagreb', title: "Solarne nadstrešnice", description: "Postavljanje solara na krovove tramvajskih stanica za napajanje LED ekrana.", category: Category.ENERGY, impactScore: 85, author: "Ivan Horvat", authorAvatar: "IH", date: "10.03.2024.", stage: IncubatorStage.PROTOTYPING, likes: 120, comments: [], isVerified: true, status: 'APPROVED', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  { id: 'i-zg-2', cityId: 'zagreb', title: "Aplikacija 'ZG Otpad'", description: "Gamifikacija recikliranja s nagradama za građane.", category: Category.ENVIRONMENT, impactScore: 45, author: "Maja P.", authorAvatar: "MP", date: "12.03.2024.", stage: IncubatorStage.VALIDATION, likes: 56, comments: [], isVerified: false, status: 'PENDING', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+
+  // SPLIT
+  { id: 'i-st-1', cityId: 'split', title: "E-Bicikli Poljud", description: "Sustav javnih e-bicikala povezan s kartom za stadion.", category: Category.TRANSPORT, impactScore: 78, author: "Luka Marulić", authorAvatar: "LM", date: "14.03.2024.", stage: IncubatorStage.SCALING, likes: 210, comments: [], isVerified: true, status: 'APPROVED', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+
+  // ZADAR
+  { id: 'i-zd-1', cityId: 'zadar', title: "Pametni parking Poluotok", description: "Senzori za slobodna mjesta povezani s mobilnom aplikacijom.", category: Category.TRANSPORT, impactScore: 92, author: "Niko Morski", authorAvatar: "NM", date: "15.03.2024.", stage: IncubatorStage.TESTING, likes: 340, comments: [], isVerified: true, status: 'APPROVED', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  
+  // OSIJEK
+  { id: 'i-os-1', cityId: 'osijek', title: "Agro-Senzori za OPG", description: "Mreža senzora za praćenje vlage i hranjivih tvari u tlu za lokalne poljoprivrednike.", category: Category.ENVIRONMENT, impactScore: 90, author: "Pero Perić", authorAvatar: "PP", date: "18.03.2024.", stage: IncubatorStage.DISCOVERY, likes: 89, comments: [], isVerified: true, status: 'APPROVED', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+];
+
+const INITIAL_POSTS: Post[] = [
+  { id: 'post-1', userId: 'u1', cityId: 'zagreb', author: 'Ivan Horvat', authorAvatar: 'IH', content: 'Što mislite o uvođenju pješačke zone u Masarykovoj trajno? Meni se čini kao super stvar za centar.', likes: 45, commentsCount: 12, created_at: new Date().toISOString(), likedByCurrentUser: false },
+  { id: 'post-2', userId: 'u2', cityId: 'split', author: 'Luka Marulić', authorAvatar: 'LM', content: 'Gužve na ulazu u grad su nesnošljive. Hitno nam treba AI sinkronizacija semafora!', likes: 120, commentsCount: 34, created_at: new Date().toISOString(), likedByCurrentUser: true },
+  { id: 'post-3', userId: 'u5', cityId: 'zadar', author: 'Niko Morski', authorAvatar: 'NM', content: 'Morske orgulje trebaju redovito čišćenje, zvuk više nije isti kao prije par godina.', likes: 88, commentsCount: 15, created_at: new Date().toISOString(), likedByCurrentUser: false },
+  { id: 'post-4', userId: 'u3', cityId: 'rijeka', author: 'Morena F.', authorAvatar: 'MF', content: 'Novi startup hub je pun pogodak. Rijeka napokon postaje IT centar regije!', likes: 200, commentsCount: 45, created_at: new Date().toISOString(), likedByCurrentUser: false },
+];
+
+const INITIAL_POLLS: Poll[] = [
+  { id: 'p-zg-1', cityId: 'zagreb', question: 'Širenje pješačke zone u Masarykovoj?', options: [{id:'o1', text:'Da', votes: 4500}, {id:'o2', text:'Ne', votes: 1200}], totalVotes: 5700, endsIn: '5 dana' },
+  { id: 'p-st-1', cityId: 'split', question: 'Novi stadion na Poljudu ili sanacija?', options: [{id:'o1', text:'Novi stadion', votes: 8900}, {id:'o2', text:'Sanacija', votes: 12000}], totalVotes: 20900, endsIn: '10 dana' },
+  { id: 'p-os-1', cityId: 'osijek', question: 'Više biciklističkih staza uz Dravu?', options: [{id:'o1', text:'Naravno', votes: 3400}, {id:'o2', text:'Dosta ih je', votes: 150}], totalVotes: 3550, endsIn: '2 dana' },
+];
+
+const NIAS_DATABASE: Record<string, User> = {
+  'OIB-ZAGREB': { id: 'u1', name: 'Ivan Horvat', email: 'ivan.h@zagreb.hr', role: UserRole.CITIZEN, impactScore: 2100, rank: 'Dijamantni Građanin', verifiedCount: 42, ideasCount: 12, avatar: 'IH', cityId: 'zagreb', badges: BADGES, joined_date: '2024-01-01' },
+  'OIB-SPLIT': { id: 'u2', name: 'Luka Marulić', email: 'luka.m@split.hr', role: UserRole.CITIZEN, impactScore: 1850, rank: 'Zlatni Inovator', verifiedCount: 30, ideasCount: 8, avatar: 'LM', cityId: 'split', badges: BADGES, joined_date: '2024-02-15' },
+  'OIB-RIJEKA': { id: 'u3', name: 'Morena Fiuman', email: 'morena.f@rijeka.hr', role: UserRole.CITIZEN, impactScore: 1600, rank: 'Srebrni Član', verifiedCount: 22, ideasCount: 5, avatar: 'MF', cityId: 'rijeka', badges: BADGES, joined_date: '2024-03-10' },
+  'OIB-ZADAR': { id: 'u5', name: 'Niko Morski', email: 'niko.m@zadar.hr', role: UserRole.CITIZEN, impactScore: 2400, rank: 'Vitez Zadra', verifiedCount: 50, ideasCount: 15, avatar: 'NM', cityId: 'zadar', badges: BADGES, joined_date: '2024-05-20' },
+  'OIB-ADMIN': { id: 'adm-01', name: 'Stjepan S.', email: 'superadmin@grad.plus', role: UserRole.ADMIN, impactScore: 9999, rank: 'Sustav Nadzornik', verifiedCount: 1000, ideasCount: 0, avatar: 'SS', cityId: 'zagreb', badges: BADGES, joined_date: '2023-01-01' }
 };
 
-initializeDatabase();
-
-// --- AUTH SERVICE (Port 3001) ---
 export const authAPI = {
-  login: async (email: string, password?: string): Promise<{user: User, token: string}> => {
-    await delay(1200);
-    const mockUser: User = {
-      id: 'usr_99',
-      name: 'Marko Horvat',
-      email: email,
-      role: UserRole.CITIZEN,
-      impactScore: 1450,
-      rank: 'Zlatni Inovator',
-      verifiedCount: 18,
-      ideasCount: 5,
-      avatar: 'MH',
-      cityId: 'zadar',
-      badges: BADGES,
-      joined_date: new Date().toISOString()
-    };
-    const mockToken = `ey_jwt_mock_${Date.now()}`;
+  login: async (credential: string): Promise<{user: User, token: string}> => {
+    await delay(1500); 
+    const upperOib = credential.toUpperCase();
+    const user = NIAS_DATABASE[upperOib];
+    
+    if (!user) {
+      throw new Error('Pogrešan OIB. Sustav e-Građanin ne prepoznaje unesene vjerodajnice.');
+    }
+    
+    const mockToken = `jwt_${Date.now()}`;
     localStorage.setItem(STORAGE_KEYS.TOKEN, mockToken);
-    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(mockUser));
-    return { user: mockUser, token: mockToken };
+    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
+    return { user, token: mockToken };
   },
 
   logout: async () => {
-    await delay(300);
     localStorage.removeItem(STORAGE_KEYS.TOKEN);
     localStorage.removeItem(STORAGE_KEYS.USER);
   },
@@ -75,26 +99,20 @@ export const authAPI = {
   getCurrentUser: (): User | null => {
     const data = localStorage.getItem(STORAGE_KEYS.USER);
     return data ? JSON.parse(data) : null;
-  },
-
-  updateProfile: async (user: User): Promise<User> => {
-    await delay(800);
-    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
-    return user;
   }
 };
 
-// --- IDEAS SERVICE (Port 3002) ---
 export const ideasAPI = {
   getAll: async (cityId?: string): Promise<Idea[]> => {
-    await delay(500);
-    const ideas = JSON.parse(localStorage.getItem(STORAGE_KEYS.IDEAS) || '[]');
+    await delay(300);
+    const stored = localStorage.getItem(STORAGE_KEYS.IDEAS);
+    const ideas = stored ? JSON.parse(stored) : INITIAL_IDEAS;
     return cityId ? ideas.filter((i: Idea) => i.cityId === cityId) : ideas;
   },
-
   create: async (idea: Partial<Idea>, user: User): Promise<Idea> => {
-    await delay(900);
-    const ideas = JSON.parse(localStorage.getItem(STORAGE_KEYS.IDEAS) || '[]');
+    await delay(800);
+    const stored = localStorage.getItem(STORAGE_KEYS.IDEAS);
+    const ideas = stored ? JSON.parse(stored) : [...INITIAL_IDEAS];
     const newIdea: Idea = {
       id: `id_${Date.now()}`,
       title: idea.title!,
@@ -108,94 +126,60 @@ export const ideasAPI = {
       likes: 0,
       comments: [],
       isVerified: false,
-      cityId: idea.cityId || user.cityId,
+      cityId: user.cityId,
       status: 'PENDING',
       created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
+      challenge_id: idea.challenge_id
     };
     ideas.unshift(newIdea);
     localStorage.setItem(STORAGE_KEYS.IDEAS, JSON.stringify(ideas));
     return newIdea;
-  },
-
-  updateStage: async (id: string, stage: IncubatorStage): Promise<Idea> => {
-    await delay(400);
-    const ideas = JSON.parse(localStorage.getItem(STORAGE_KEYS.IDEAS) || '[]');
-    const index = ideas.findIndex((i: Idea) => i.id === id);
-    if (index === -1) throw new Error('Idea not found');
-    ideas[index].stage = stage;
-    ideas[index].updated_at = new Date().toISOString();
-    localStorage.setItem(STORAGE_KEYS.IDEAS, JSON.stringify(ideas));
-    return ideas[index];
   }
 };
 
-// --- CHALLENGES SERVICE ---
 export const challengesAPI = {
   getAll: async (cityId?: string): Promise<Challenge[]> => {
-    await delay(400);
-    const challenges = JSON.parse(localStorage.getItem(STORAGE_KEYS.CHALLENGES) || '[]');
+    await delay(300);
+    const stored = localStorage.getItem(STORAGE_KEYS.CHALLENGES);
+    const challenges = stored ? JSON.parse(stored) : INITIAL_CHALLENGES;
     return cityId ? challenges.filter((c: Challenge) => c.cityId === cityId) : challenges;
   }
 };
 
-// --- POLLS SERVICE ---
 export const pollsAPI = {
   getAll: async (cityId?: string): Promise<Poll[]> => {
-    await delay(300);
-    const polls = JSON.parse(localStorage.getItem(STORAGE_KEYS.POLLS) || '[]');
+    await delay(200);
+    const stored = localStorage.getItem(STORAGE_KEYS.POLLS);
+    const polls = stored ? JSON.parse(stored) : INITIAL_POLLS;
     return cityId ? polls.filter((p: Poll) => p.cityId === cityId) : polls;
   }
 };
 
-// --- COMMUNITY SERVICE (Port 3004) ---
 export const communityAPI = {
   getPosts: async (cityId?: string): Promise<Post[]> => {
-    await delay(400);
-    const posts = JSON.parse(localStorage.getItem(STORAGE_KEYS.POSTS) || '[]');
+    await delay(300);
+    const stored = localStorage.getItem(STORAGE_KEYS.POSTS);
+    const posts = stored ? JSON.parse(stored) : INITIAL_POSTS;
     return cityId ? posts.filter((p: Post) => p.cityId === cityId) : posts;
   },
-
   createPost: async (content: string, user: User): Promise<Post> => {
-    await delay(600);
-    const posts = JSON.parse(localStorage.getItem(STORAGE_KEYS.POSTS) || '[]');
-    const newPost: Post = {
-      id: `post_${Date.now()}`,
-      userId: user.id,
-      cityId: user.cityId,
-      author: user.name,
-      authorAvatar: user.avatar,
-      content,
-      likes: 0,
-      commentsCount: 0,
-      created_at: new Date().toISOString(),
-      likedByCurrentUser: false
-    };
+    await delay(500);
+    const stored = localStorage.getItem(STORAGE_KEYS.POSTS);
+    const posts = stored ? JSON.parse(stored) : [...INITIAL_POSTS];
+    const newPost: Post = { id: `post_${Date.now()}`, userId: user.id, cityId: user.cityId, author: user.name, authorAvatar: user.avatar, content, likes: 0, commentsCount: 0, created_at: new Date().toISOString(), likedByCurrentUser: false };
     posts.unshift(newPost);
     localStorage.setItem(STORAGE_KEYS.POSTS, JSON.stringify(posts));
     return newPost;
   },
-
   likePost: async (postId: string): Promise<void> => {
-    const posts = JSON.parse(localStorage.getItem(STORAGE_KEYS.POSTS) || '[]');
+    const stored = localStorage.getItem(STORAGE_KEYS.POSTS);
+    const posts = stored ? JSON.parse(stored) : [...INITIAL_POSTS];
     const index = posts.findIndex((p: Post) => p.id === postId);
     if (index !== -1) {
       posts[index].likes += posts[index].likedByCurrentUser ? -1 : 1;
       posts[index].likedByCurrentUser = !posts[index].likedByCurrentUser;
       localStorage.setItem(STORAGE_KEYS.POSTS, JSON.stringify(posts));
     }
-  }
-};
-
-// --- ANALYTICS SERVICE (Port 3005) ---
-export const analyticsAPI = {
-  getGlobalStats: async () => {
-    await delay(700);
-    return {
-      activeUsers: 14205,
-      totalIdeas: 5642,
-      carbonReduction: '12%',
-      smartCitiesActive: 42
-    };
   }
 };
