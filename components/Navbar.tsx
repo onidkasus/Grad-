@@ -92,8 +92,8 @@ const Navbar: React.FC<NavbarProps> = ({
                            <span className="material-icons-round text-lg">{city.theme.culturalIcon}</span>
                          </div>
                          <div className="text-left">
-                            <span className={`block text-[11px] font-black uppercase tracking-widest ${selectedCity.id === city.id ? 'text-white' : 'text-gray-900 dark:text-white'}`}>{city.name}</span>
-                            <span className={`text-[8px] font-bold uppercase ${selectedCity.id === city.id ? 'text-white/60' : 'text-gray-400'}`}>HR • 0{CITIES.indexOf(city) + 1}</span>
+                           <span className={`block text-[11px] font-black uppercase tracking-widest ${selectedCity.id === city.id ? 'text-white' : 'text-gray-900 dark:text-white'}`} style={{ textShadow: selectedCity.id === city.id ? '0 1px 0 rgba(0,0,0,0.18)' : undefined }}>{city.name}</span>
+                           <span className={`text-[8px] font-bold uppercase ${selectedCity.id === city.id ? 'text-white/90' : 'text-gray-600 dark:text-gray-300'}`}>HR • 0{CITIES.indexOf(city) + 1}</span>
                          </div>
                       </button>
                     ))}
