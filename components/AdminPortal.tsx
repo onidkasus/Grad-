@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Idea, Challenge, CityConfig, Category, IncubatorStage } from '../types';
 import { CITIES } from '../constants';
+import { ideasAPI } from '../services/api';
 
 interface AdminPortalProps {
   ideas: Idea[];
@@ -36,16 +37,38 @@ const AdminPortal: React.FC<AdminPortalProps> = ({ ideas, setIdeas, challenges, 
     };
   }, [ideas, challenges]);
 
-  const approveIdea = (id: string) => {
-    setIdeas(prev => prev.map(i => i.id === id ? { ...i, status: 'APPROVED', stage: IncubatorStage.VALIDATION } : i));
-    showToast('Inicijativa odobrena i poslana u Inkubator.', 'success');
-    if (selectedSubmissionId === id) setSelectedSubmissionId(null);
+  const approveIdea = async (id: string) => {
+    try {
+        if (adminContext !== 'zagreb') {
+           // Move to Zagreb for final verification
+           await ideasAPI.recommendToZagreb(id);
+           // Optimistically remove from current list since it moved cities
+           setIdeas(prev => prev.filter(i => i.id !== id));
+           showToast('Inicijativa preporučena i poslana Zagrebu na verifikaciju.', 'success');
+        } else {
+           // Zagreb actually approves it
+           await ideasAPI.accept(id);
+           setIdeas(prev => prev.map(i => i.id === id ? { ...i, status: 'APPROVED', stage: IncubatorStage.DISCOVERY, isVerified: true } : i));
+           showToast('Inicijativa odobrena i poslana u Inkubator.', 'success');
+        }
+        
+        if (selectedSubmissionId === id) setSelectedSubmissionId(null);
+    } catch (e) {
+        console.error("Approval failed", e);
+        showToast('Greška prilikom odobravanja.', 'info');
+    }
   };
 
-  const deleteIdea = (id: string) => {
-    setIdeas(prev => prev.filter(i => i.id !== id));
-    showToast('Prijava je uklonjena iz sustava.');
-    if (selectedSubmissionId === id) setSelectedSubmissionId(null);
+  const deleteIdea = async (id: string) => {
+    try {
+        await ideasAPI.reject(id);
+        setIdeas(prev => prev.filter(i => i.id !== id));
+        showToast('Prijava je odbijena.');
+        if (selectedSubmissionId === id) setSelectedSubmissionId(null);
+    } catch (e) {
+        console.error("Rejection failed", e);
+        showToast('Greška prilikom odbijanja.', 'info');
+    }
   };
 
   const spring = { type: "spring", stiffness: 400, damping: 40 } as const;
@@ -206,7 +229,9 @@ const AdminPortal: React.FC<AdminPortalProps> = ({ ideas, setIdeas, challenges, 
                              </div>
                           </div>
                           <div className="flex gap-3">
-                             <button onClick={() => approveIdea(selectedSubmission.id)} className="px-10 py-5 bg-green-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-green-500/20 hover:scale-105 active:scale-95 transition-all">Verificiraj</button>
+                             <button onClick={() => approveIdea(selectedSubmission.id)} className="px-10 py-5 bg-green-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-green-500/20 hover:scale-105 active:scale-95 transition-all">
+                                 {adminContext === 'zagreb' ? 'Verificiraj' : 'Preporuči Zagrebu'}
+                             </button>
                              <button onClick={() => deleteIdea(selectedSubmission.id)} className="px-10 py-5 bg-gray-100 text-gray-400 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:text-red-500 transition-all">Odbaci</button>
                           </div>
                        </div>

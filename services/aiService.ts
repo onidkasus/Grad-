@@ -130,5 +130,27 @@ export const AiService = {
             sources: []
         };
     }
+  },
+
+  rateIdea: async (title: string, description: string): Promise<number> => {
+     const prompt = `Ocijeni ovu ideju za gradski projekt na skali od 1 do 100 na temelju izvedivosti (feasibility), utjecaja (impact) i jasnoće (clarity).
+     
+     Naslov: ${title}
+     Opis: ${description}
+     
+     Vrati ISKLJUČIVO samo jedan broj (0-100). Ništa drugo.`;
+
+     try {
+         const response = await AiService.chat([
+             { role: 'user', content: prompt }
+         ]);
+         
+         const nums = response.match(/\d+/);
+         const number = parseInt(nums ? nums[0] : '50');
+         return isNaN(number) ? 50 : Math.min(100, Math.max(0, number));
+     } catch (e) {
+         console.error("AI Rating failed", e);
+         return 50; // Neutral fallback
+     }
   }
 };

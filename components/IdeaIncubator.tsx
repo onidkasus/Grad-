@@ -101,45 +101,59 @@ const IdeaIncubator: React.FC<IdeaIncubatorProps> = ({ ideas, setIdeas, isReadOn
                         onDragStart={(e) => handleDragStart(e, idea.id)}
                         className={`bg-white p-5 rounded-3xl border border-gray-100 shadow-sm group transition-all ${!isReadOnly ? 'cursor-grab active:cursor-grabbing hover:shadow-xl hover:-translate-y-1' : ''}`}
                       >
-                        <div className="flex justify-between items-start mb-3">
-                          <span 
-                            className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md"
-                            style={{ backgroundColor: `${city.theme.primary}10`, color: city.theme.primary }}
-                          >
-                            {idea.category}
-                          </span>
-                          {!isReadOnly && <span className="material-icons-round text-gray-300 text-xs">drag_indicator</span>}
+                        <div className="flex justify-between items-start mb-4">
+                          <div className="flex flex-wrap gap-2">
+                             <span 
+                               className="text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg"
+                               style={{ backgroundColor: `${city.theme.primary}08`, color: city.theme.primary }}
+                             >
+                               {idea.category}
+                             </span>
+                             {idea.aiRating !== undefined && (
+                                <span className={`text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg border ${
+                                    idea.aiRating >= 80 ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                    idea.aiRating >= 50 ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                                    'bg-gray-50 text-gray-400 border-gray-100'
+                                }`}>
+                                   AI {idea.aiRating}
+                                </span>
+                             )}
+                          </div>
+                          {!isReadOnly && <span className="material-icons-round text-gray-200 text-sm">drag_indicator</span>}
                         </div>
-                        <h4 className="font-black text-gray-900 mb-2 leading-tight text-sm group-hover:text-blue-600 transition-colors" style={{ color: !isReadOnly ? 'inherit' : city.theme.primary }}>
+                        
+                        <h4 className="font-extrabold text-gray-900 mb-2 leading-tight text-[0.95rem] group-hover:text-blue-600 transition-colors" style={{ color: !isReadOnly ? 'inherit' : city.theme.primary }}>
                           {idea.title}
                         </h4>
-                        <p className="text-[11px] text-gray-400 line-clamp-2 font-medium mb-4 leading-relaxed">{idea.description}</p>
+                        <p className="text-xs text-gray-400 line-clamp-2 font-medium mb-6 leading-relaxed">{idea.description}</p>
                         
-                        <div className="flex items-center justify-between pt-4 border-t border-gray-50">
-                          <div className="flex items-center gap-2">
-                             <div className="w-6 h-6 rounded-lg bg-gray-50 flex items-center justify-center text-[9px] font-black text-gray-500 shadow-inner">
+                        <div className="flex items-center justify-between pt-4 border-t border-gray-50/50">
+                          <div className="flex items-center gap-2 group/author cursor-help" title={`Autor: ${idea.author}`}>
+                             <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-[10px] font-black text-gray-500 shadow-sm border border-gray-100">
                                {idea.authorAvatar}
                              </div>
-                             <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">{idea.author}</span>
+                             {/* Removed name per request to clean up UI */}
                           </div>
                           
                           {/* Fallback strijelice za brzu promjenu na desktopu/tabletu bez D&D */}
                           {!isReadOnly && (
-                            <div className="flex gap-1">
+                            <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                               {stages.indexOf(stage) > 0 && (
                                 <button 
                                   onClick={() => moveIdea(idea.id, stages[stages.indexOf(stage) - 1])}
-                                  className="w-6 h-6 rounded-lg flex items-center justify-center bg-gray-50 text-gray-400 hover:bg-gray-900 hover:text-white transition-all"
+                                  className="w-8 h-8 rounded-full flex items-center justify-center bg-white border border-gray-100 text-gray-400 hover:bg-gray-900 hover:text-white hover:border-gray-900 transition-all shadow-sm"
+                                  title="Vrati fazu"
                                 >
-                                  <span className="material-icons-round text-xs">chevron_left</span>
+                                  <span className="material-icons-round text-xs">arrow_back</span>
                                 </button>
                               )}
                               {stages.indexOf(stage) < stages.length - 1 && (
                                 <button 
                                   onClick={() => moveIdea(idea.id, stages[stages.indexOf(stage) + 1])}
-                                  className="w-6 h-6 rounded-lg flex items-center justify-center bg-gray-50 text-gray-400 hover:bg-gray-900 hover:text-white transition-all"
+                                  className="w-8 h-8 rounded-full flex items-center justify-center bg-white border border-gray-100 text-gray-400 hover:bg-gray-900 hover:text-white hover:border-gray-900 transition-all shadow-sm"
+                                  title="Napreduj fazu"
                                 >
-                                  <span className="material-icons-round text-xs">chevron_right</span>
+                                  <span className="material-icons-round text-xs">arrow_forward</span>
                                 </button>
                               )}
                             </div>

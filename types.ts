@@ -76,6 +76,7 @@ export interface Idea {
   challenge_id?: string;
   tags?: string[];
   phase?: number;
+  aiRating?: number;
 }
 
 export interface Post {

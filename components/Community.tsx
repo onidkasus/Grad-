@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Idea, CityConfig, Category, IncubatorStage, Poll, User, Post, PostComment } from '../types';
-import { communityAPI } from '../services/api';
+import { communityAPI, ideasAPI } from '../services/api';
 
 interface CommunityProps {
   ideas: Idea[];
@@ -61,33 +61,27 @@ const Community: React.FC<CommunityProps> = ({ ideas, setIdeas, city, polls, onV
       }
   };
 
-  const handleCreateIdea = () => {
+  const handleCreateIdea = async () => {
     if (!newIdeaTitle.trim() || !newIdeaDesc.trim()) return;
     
-    const newIdea: Idea = {
-      id: Date.now().toString(),
-      title: newIdeaTitle,
-      description: newIdeaDesc,
-      category: selectedCategory,
-      impactScore: 10,
-      author: user.name,
-      authorAvatar: user.avatar,
-      date: new Date().toLocaleDateString('hr-HR'),
-      stage: IncubatorStage.DISCOVERY,
-      likes: 0,
-      comments: [],
-      isVerified: false,
-      cityId: city.id,
-      status: 'PENDING',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
+    try {
+        const partialIdea: Partial<Idea> = {
+          title: newIdeaTitle,
+          description: newIdeaDesc,
+          category: selectedCategory,
+        };
 
-    setIdeas(prev => [newIdea, ...prev]);
-    setNewIdeaTitle('');
-    setNewIdeaDesc('');
-    setIsPosting(false);
-    showToast('Vaša vizija je uspješno objavljena!', 'success');
+        const createdIdea = await ideasAPI.create(partialIdea, user);
+
+        setIdeas(prev => [createdIdea, ...prev]);
+        setNewIdeaTitle('');
+        setNewIdeaDesc('');
+        setIsPosting(false);
+        showToast('Vaša vizija je uspješno objavljena!', 'success');
+    } catch (e) {
+        console.error("Failed to create idea:", e);
+        showToast('Greška prilikom objave ideje.', 'info');
+    }
   };
 
   const handleCreatePost = async () => {
@@ -329,11 +323,24 @@ const Community: React.FC<CommunityProps> = ({ ideas, setIdeas, city, polls, onV
                       </div>
                     </div>
                   </div>
-                  {idea.isVerified && (
-                    <div className="px-3 py-1 bg-green-50 text-green-600 rounded-full text-[8px] font-black uppercase tracking-widest flex items-center gap-1.5 border border-green-100">
-                      <span className="material-icons-round text-xs">verified</span> Službeno
-                    </div>
-                  )}
+                  <div className="flex flex-col items-end gap-2">
+                      {idea.aiRating !== undefined && (
+                        <div className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest flex items-center gap-1.5 border
+                              ${idea.aiRating >= 80 ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                idea.aiRating >= 50 ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                                'bg-gray-50 text-gray-500 border-gray-100'
+                              }
+                        `}>
+                          <span className="material-icons-round text-xs">auto_awesome</span>
+                          AI Ocjena: {idea.aiRating}/100
+                        </div>
+                      )}
+                      {idea.isVerified && (
+                        <div className="px-3 py-1 bg-green-50 text-green-600 rounded-full text-[8px] font-black uppercase tracking-widest flex items-center gap-1.5 border border-green-100">
+                          <span className="material-icons-round text-xs">verified</span> Službeno
+                        </div>
+                      )}
+                  </div>
                 </div>
 
                 <h3 className="text-2xl font-black text-gray-900 mb-4 tracking-tight leading-snug group-hover:text-blue-600 transition-colors">

@@ -1,6 +1,7 @@
-import { User, Idea, Challenge, Poll, Notification, UserRole, IncubatorStage, Category, Post, Badge } from '../types';
+import { User, Idea, Challenge, Poll, Notification, UserRole, IncubatorStage, Category, Post, Badge, PostComment } from '../types';
 import { BADGES } from '../constants';
 import { db } from './firebase';
+import { AiService } from './aiService';
 import { 
   collection, 
   query, 
@@ -202,7 +203,9 @@ export const ideasAPI = {
           status: status,
           created_at: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString(),
           updated_at: data.updatedAt?.toDate ? data.updatedAt.toDate().toISOString() : new Date().toISOString(),
-          challenge_id: data.challengeID
+          challenge_id: data.challengeID,
+          // Check various casing and fallback to impactScore for legacy/consistency
+          aiRating: data.aiRating ?? data.AIRating ?? data.ai_rating ?? data.impactScore ?? 0
         } as Idea;
       });
       
@@ -219,6 +222,17 @@ export const ideasAPI = {
     try {
       // Store cityID as number to match new format
       const cityIdVal = getCityNumber(user.cityId);
+      
+      // Get AI Rating (Parallel or awaited)
+      let aiRating = 50;
+      if (idea.title && idea.description) {
+          try {
+             // Don't block too long, but for now we await
+             aiRating = await AiService.rateIdea(idea.title, idea.description);
+          } catch (e) {
+             console.warn("Could not fetch AI rating", e);
+          }
+      }
 
       const ideaData = {
         title: idea.title,
@@ -235,7 +249,8 @@ export const ideasAPI = {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
         challengeID: idea.challenge_id || null,
-        impactScore: 10
+        impactScore: 10,
+        aiRating: aiRating
       };
       
       const docRef = await addDoc(collection(db, "ideas"), ideaData);
@@ -243,7 +258,14 @@ export const ideasAPI = {
         ...idea,
         id: docRef.id,
         author: user.name,
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
+        aiRating: aiRating,
+        likes: 0,
+        comments: [],
+        status: 'PENDING',
+        stage: IncubatorStage.DISCOVERY,
+        cityId: user.cityId,
+        impactScore: 10
       } as Idea;
     } catch (e) {
       console.error("Error creating idea:", e);
@@ -262,6 +284,50 @@ export const ideasAPI = {
         });
     } catch(e) {
         console.error("Error updating stage", e);
+        throw e;
+    }
+  },
+
+  accept: async (ideaId: string) => {
+    try {
+        const docRef = doc(db, "ideas", ideaId);
+        await updateDoc(docRef, {
+            isAccepted: true,
+            isProcessed: true,
+            phase: 1, // Move to phase 1 (Discovery/Accepted)
+            stage: IncubatorStage.DISCOVERY,
+            updatedAt: serverTimestamp()
+        });
+    } catch(e) {
+        console.error("Error accepting idea", e);
+        throw e;
+    }
+  },
+
+  recommendToZagreb: async (ideaId: string) => {
+    try {
+        const docRef = doc(db, "ideas", ideaId);
+        await updateDoc(docRef, {
+            cityID: 1, // 1 is Zagreb
+            updatedAt: serverTimestamp()
+        });
+    } catch(e) {
+        console.error("Error recommending to Zagreb", e);
+        throw e;
+    }
+  },
+
+  reject: async (ideaId: string) => {
+    try {
+        const docRef = doc(db, "ideas", ideaId);
+        await updateDoc(docRef, {
+            isAccepted: false,
+            isProcessed: true,
+            phase: 0, 
+            updatedAt: serverTimestamp()
+        });
+    } catch(e) {
+        console.error("Error rejecting idea", e);
         throw e;
     }
   }
@@ -313,7 +379,7 @@ export const pollsAPI = {
        }
        const snapshot = await getDocs(q);
        return snapshot.docs.map(doc => {
-         const data = doc.data();
+         const data: any = doc.data();
          return {
            id: doc.id,
            cityId: getCityString(data.cityID || 1),
