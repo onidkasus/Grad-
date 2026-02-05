@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { GoogleGenAI } from "@google/genai";
+import { AiService } from '../services/aiService';
 
 interface SupportChatProps {
   primaryColor: string;
@@ -9,7 +9,7 @@ interface SupportChatProps {
 const SupportChat: React.FC<SupportChatProps> = ({ primaryColor }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<{role: 'user' | 'bot', text: string}[]>([
-    { role: 'bot', text: 'Pozdrav! Ja sam vaš GRAD+ AI asistent. Kako vam mogu pomoći s digitalnim gradskim uslugama?' }
+    { role: 'bot', text: 'Pozdrav! Ja sam vaš Građani+ AI asistent. Kako vam mogu pomoći s digitalnim gradskim uslugama?' }
   ]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -22,16 +22,14 @@ const SupportChat: React.FC<SupportChatProps> = ({ primaryColor }) => {
     setIsTyping(true);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: `Korisnik pita o platformi GRAD+ za pametne gradove u Hrvatskoj. 
-        Budi kratak, profesionalan i uslužan na hrvatskom jeziku. Pitanje: ${userMsg}`,
-      });
+      const responseText = await AiService.chat([
+        { role: 'system', content: `Korisnik pita o platformi Građani+ za pametne gradove u Hrvatskoj. Budi kratak, profesionalan i uslužan na hrvatskom jeziku.` },
+        { role: 'user', content: userMsg }
+      ]);
       
-      setMessages(prev => [...prev, { role: 'bot', text: response.text || 'Oprostite, nisam razumio.' }]);
+      setMessages(prev => [...prev, { role: 'bot', text: responseText }]);
     } catch (e) {
-      setMessages(prev => [...prev, { role: 'bot', text: 'Trenutno imam tehničkih poteškoća.' }]);
+      setMessages(prev => [...prev, { role: 'bot', text: 'Trenutno imam tehničkih poteškoća. Provjerite lokalni AI servis.' }]);
     } finally {
       setIsTyping(false);
     }

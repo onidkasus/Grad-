@@ -32,8 +32,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, userRole, ci
           <span className="material-icons-round text-2xl">{cityTheme.culturalIcon}</span>
         </div>
         <div>
-          <h1 className="text-2xl font-black tracking-tight" style={{ color: cityTheme.primary }}>GRAD+</h1>
-          <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Croatia Smart Platform</p>
+          <h1 className="text-2xl font-black tracking-tight" style={{ color: cityTheme.primary }}>GRAĐANI+</h1>
+          <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Hrvatska Digitalna Mreža</p>
         </div>
       </div>
 

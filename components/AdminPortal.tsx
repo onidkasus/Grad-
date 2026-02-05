@@ -27,7 +27,9 @@ const AdminPortal: React.FC<AdminPortalProps> = ({ ideas, setIdeas, challenges, 
       totalPending: ideas.filter(i => i.status === 'PENDING').length,
       totalChallenges: challenges.length,
       byCity: CITIES.map(c => ({
+        id: c.id,
         name: c.name,
+        primary: c.theme.primary,
         count: ideas.filter(i => i.cityId === c.id).length,
         pending: ideas.filter(i => i.cityId === c.id && i.status === 'PENDING').length
       }))
@@ -121,9 +123,9 @@ const AdminPortal: React.FC<AdminPortalProps> = ({ ideas, setIdeas, challenges, 
                <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 mb-8">Status po Gradovima</h3>
                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   {globalStats.byCity.map(cityStats => (
-                    <div key={cityStats.name} className="p-6 rounded-2xl bg-gray-50 flex items-center justify-between group hover:bg-white hover:shadow-xl transition-all border border-transparent hover:border-blue-50">
+                    <div key={cityStats.id} className="p-6 rounded-2xl bg-gray-50 flex items-center justify-between group hover:bg-white hover:shadow-xl transition-all border border-transparent hover:border-blue-50">
                        <div>
-                          <p className="text-sm font-black text-gray-900 uppercase tracking-tighter">{cityStats.name}</p>
+                          <p className="text-sm font-black uppercase tracking-tighter" style={{ color: city.theme.primary }}>{cityStats.name}</p>
                           <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{cityStats.count} Projekata</p>
                        </div>
                        {cityStats.pending > 0 && (

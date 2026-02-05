@@ -72,8 +72,8 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
           <div className="inline-block px-5 py-2 rounded-full bg-blue-600/10 border border-blue-500/20 backdrop-blur-xl mb-8">
             <p className="text-[10px] font-black text-blue-600 uppercase tracking-[0.4em]">OD GRAĐANA ZA GRAĐANE</p>
           </div>
-          <h1 className="text-7xl md:text-[9rem] font-black text-gray-900 leading-[0.8] tracking-tighter mb-10">
-            GRAD<span className="text-blue-600">+</span>
+          <h1 className="text-5xl md:text-[5rem] lg:text-[6rem] font-black text-gray-900 leading-[0.9] tracking-tighter mb-10">
+            GRAĐANI<span className="text-blue-600">+</span>
           </h1>
           <p className="text-xl md:text-3xl text-gray-400 font-medium max-w-lg mb-12 leading-tight">
             Nacionalni standard suradnje između građana i moderne uprave. <span className="text-gray-900 font-black">Digitalna budućnost Hrvatske.</span>
@@ -91,8 +91,8 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
             className={`bg-white/80 backdrop-blur-3xl rounded-[3.5rem] p-12 md:p-16 border shadow-2xl relative overflow-hidden transition-colors ${error ? 'border-red-500 shadow-red-100' : 'border-white'}`}
           >
             <div className="text-center mb-12">
-              <div className="w-20 h-20 bg-gray-50 rounded-[2rem] flex items-center justify-center mx-auto mb-8 shadow-inner border border-gray-100">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/1/1b/Coat_of_arms_of_Croatia.svg" alt="HR" className="w-10 h-10" />
+              <div className="w-24 h-24 rounded-[2rem] flex items-center justify-center mx-auto mb-8 shadow-inner border border-gray-100 overflow-hidden" style={{ backgroundColor: '#ca1720' }}>
+                <img src="https://eusluge-nav.gov.hr/img/logo.svg" alt="e-Građani" className="w-full h-full object-contain p-5" />
               </div>
               <h2 className="text-3xl font-black text-gray-900 mb-2 tracking-tight">Sigurna Prijava</h2>
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em]">Integracija NIAS sustava v3.0</p>
@@ -120,14 +120,14 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
               <button 
                 onClick={handleNiasLogin}
                 disabled={isLoading}
-                className="w-full py-6 rounded-[2rem] bg-blue-600 text-white font-black text-[11px] uppercase tracking-[0.3em] shadow-2xl hover:bg-blue-700 hover:-translate-y-1 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-4"
+                className="w-full py-6 rounded-[2rem] bg-blue-600 text-white font-black text-[10px] md:text-[11px] uppercase tracking-widest shadow-2xl hover:bg-blue-700 hover:-translate-y-1 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3"
               >
                 {isLoading ? (
                   <div className="w-6 h-6 border-3 border-white/20 border-t-white rounded-full animate-spin"></div>
                 ) : (
                   <>
                     <span className="material-icons-round">vpn_key</span>
-                    E-Građanin Prijava
+                    Prijava preko sustava e-Građani
                   </>
                 )}
               </button>

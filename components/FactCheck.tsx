@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { verifyClaim } from '../services/geminiService';
+import { AiService } from '../services/aiService';
 import { CityConfig } from '../types';
 
 interface FactCheckProps {
@@ -15,7 +15,7 @@ const FactCheck: React.FC<FactCheckProps> = ({ city }) => {
   const handleVerify = async () => {
     if (!claim.trim()) return;
     setIsLoading(true);
-    const data = await verifyClaim(claim);
+    const data = await AiService.verifyClaim(claim);
     setResult(data);
     setIsLoading(false);
   };

@@ -16,6 +16,19 @@ const STORAGE_KEYS = {
   NOTIFICATIONS: 'grad_plus_notifications_db'
 };
 
+// Helper: Map numeric DB city ID to app string ID
+const getCityString = (id: number) => {
+  switch(id) {
+    case 2: return 'split';
+    case 3: return 'rijeka';
+    case 4: return 'osijek'; 
+    case 5: return 'zadar';
+    case 6: return 'velika_gorica';
+    case 7: return 'slavonski_brod';
+    default: return 'zagreb';
+  }
+};
+
 const INITIAL_CHALLENGES: Challenge[] = [
   // ZAGREB
   { id: 'c-zg-1', cityId: 'zagreb', title: "Zeleni prsten Sljemena", description: "Revitalizacija pješačkih staza uz pametnu rasvjetu i senzore za vlagu tla.", category: Category.ENVIRONMENT, progress: 30, deadline: "01.12.2024.", ideasCount: 5, priority: "Visoko", fund: "40.000 €", featured: true, created_at: new Date().toISOString() },
@@ -88,19 +101,6 @@ export const authAPI = {
       const docSnap = querySnapshot.docs[0];
       const data = docSnap.data();
       
-      // Map cityID to string cityId
-      const getCityString = (id: number) => {
-        switch(id) {
-          case 2: return 'split';
-          case 3: return 'rijeka';
-          case 4: return 'osijek'; 
-          case 5: return 'zadar';
-          case 6: return 'velika_gorica';
-          case 7: return 'slavonski_brod';
-          default: return 'zagreb';
-        }
-      };
-
       const user: User = {
         id: docSnap.id,
         firstName: data.firstName || '',
@@ -221,6 +221,26 @@ export const communityAPI = {
       posts[index].likes += posts[index].likedByCurrentUser ? -1 : 1;
       posts[index].likedByCurrentUser = !posts[index].likedByCurrentUser;
       localStorage.setItem(STORAGE_KEYS.POSTS, JSON.stringify(posts));
+    }
+  }
+};
+
+export const citiesAPI = {
+  getAll: async (): Promise<{id: string, name: string}[]> => {
+    try {
+      const citiesRef = collection(db, "cities");
+      const snapshot = await getDocs(citiesRef);
+      return snapshot.docs.map(doc => {
+        const data = doc.data();
+        const numericId = parseInt(doc.id, 10);
+        return {
+          id: getCityString(numericId), // Convert "7" -> "slavonski_brod"
+          name: data.cityName || 'Nepoznat Grad'
+        };
+      });
+    } catch (e) {
+      console.error("Error fetching cities:", e);
+      return [];
     }
   }
 };

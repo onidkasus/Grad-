@@ -15,8 +15,8 @@ interface Step {
 
 const steps: Step[] = [
   { 
-    title: 'Dobrodošli na GRAD+', 
-    text: 'Vaša nova destinacija za izravnu suradnju s gradskom upravom. OD GRAĐANA ZA GRAĐANE!', 
+    title: 'Dobrodošli na Građani+', 
+    text: 'Vaša nova destinacija za izravnu suradnju s gradskom upravom. Od građana za građane!', 
     icon: 'auto_awesome',
     targetId: 'center'
   },

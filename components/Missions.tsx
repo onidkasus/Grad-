@@ -56,7 +56,7 @@ const Missions: React.FC<MissionsProps> = ({ user }) => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {missions.map((m, i) => (
+            {missions.map((m, i) => (
              <motion.div 
                key={m.id} 
                initial={{ opacity: 0, y: 20 }}
@@ -68,9 +68,14 @@ const Missions: React.FC<MissionsProps> = ({ user }) => {
                   <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
                     <span className="material-icons-round text-2xl">flag</span>
                   </div>
-                  <span className="px-3 py-1 bg-gray-50 text-gray-400 text-xs font-bold rounded-full uppercase tracking-wider">
-                    Aktivan
-                  </span>
+                  {(() => {
+                    const expired = new Date(m.duration_end) < new Date();
+                    return (
+                      <span className={`px-3 py-1 text-xs font-bold rounded-full uppercase tracking-wider ${expired ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-gray-50 text-gray-400'}`}>
+                        {expired ? 'Istekla' : 'Aktivan'}
+                      </span>
+                    );
+                  })()}
                 </div>
                 <h3 className="font-black text-xl text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">{m.name}</h3>
                 <p className="text-gray-500 text-sm leading-relaxed mb-6">{m.desc}</p>

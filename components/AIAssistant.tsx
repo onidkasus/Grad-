@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { GoogleGenAI, Type, FunctionDeclaration } from "@google/genai";
+import { AiService } from '../services/aiService';
 import { CityConfig, User } from '../types';
 
 interface AIAssistantProps {
@@ -34,21 +34,6 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ onClose, city, user, theme, o
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const navigateToTabDeclaration: FunctionDeclaration = {
-    name: 'navigateToTab',
-    parameters: {
-      type: Type.OBJECT,
-      description: 'Navigira korisnika na određenu sekciju aplikacije.',
-      properties: {
-        tabId: {
-          type: Type.STRING,
-          description: 'ID sekcije: dashboard, fiscal, inspection, challenges, incubator, community, vault, account.',
-        },
-      },
-      required: ['tabId'],
-    },
-  };
-
   const handleSend = async (messageText?: string) => {
     const textToSend = messageText || input.trim();
     if (!textToSend || isLoading) return;
@@ -59,38 +44,45 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ onClose, city, user, theme, o
     setIsLoading(true);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: `Ti si stručni AI asistent za platformu GRAD+ u Hrvatskoj. Grad: ${city.name}. Korisnik: ${user.name}.
-        Tvoja uloga je da budeš koristan, proaktivan i da koristiš alate kada je to potrebno.
-        Pitanje: ${textToSend}`,
-        config: {
-          tools: [{ functionDeclarations: [navigateToTabDeclaration] }],
-        }
-      });
+      const systemPrompt = `Ti si stručni AI asistent za platformu Građani+ u Hrvatskoj. Grad: ${city.name}. Korisnik: ${user.name}.
+      Tvoja uloga je biti koristan i proaktivan. 
+      VAŽNO: Ako korisnik zatraži prelazak na drugu sekciju aplikacije, na KRAJU svog odgovora dodaj liniju: "CMD:NAVIGATE:<tab_id>".
+      Mogući tab_id-ovi: dashboard, fiscal, inspection, challenges, incubator, community, vault, account.
+      Primjer: "Uredu, otvaram proračun. CMD:NAVIGATE:fiscal"`;
 
-      if (response.functionCalls && response.functionCalls.length > 0) {
-        for (const fc of response.functionCalls) {
-          if (fc.name === 'navigateToTab' && onNavigate) {
-            onNavigate(fc.args.tabId as string);
-            setMessages(prev => [...prev, {
-              role: 'assistant',
-              content: `Razumijem, prebacujem vas na sekciju: ${fc.args.tabId}. Mogu li još kako pomoći?`,
-              timestamp: new Date()
-            }]);
-          }
-        }
-      } else {
-        const assistantMessage: Message = {
-          role: 'assistant',
-          content: response.text || 'Oprostite, trenutno ne mogu obraditi vaš zahtjev.',
-          timestamp: new Date()
-        };
-        setMessages(prev => [...prev, assistantMessage]);
+      const responseText = await AiService.chat([
+        { role: 'system', content: systemPrompt },
+        ...messages.map(m => ({ role: m.role, content: m.content })),
+        { role: 'user', content: textToSend }
+      ]);
+      
+      // Parse navigation command
+      let cleanContent = responseText;
+      const navMatch = responseText.match(/CMD:NAVIGATE:([a-z_]+)/);
+      
+      if (navMatch && onNavigate) {
+          const targetTab = navMatch[1];
+          cleanContent = responseText.replace(navMatch[0], '').trim();
+          onNavigate(targetTab);
+          
+          // Add a system confirmation message
+          setTimeout(() => {
+             setMessages(prev => [...prev, {
+                role: 'system',
+                content: `(Sustav: Navigacija na ${targetTab}...)`,
+                timestamp: new Date()
+             }]);
+          }, 800);
       }
+
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: cleanContent,
+        timestamp: new Date()
+      }]);
+
     } catch (error) {
-      setMessages(prev => [...prev, { role: 'assistant', content: 'Došlo je do greške u komunikaciji s AI servisom.', timestamp: new Date() }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: 'Došlo je do greške u komunikaciji s AI servisom. Provjerite je li lokalni AI (Ollama) pokrenut.', timestamp: new Date() }]);
     } finally {
       setIsLoading(false);
     }
@@ -116,8 +108,8 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ onClose, city, user, theme, o
               <span className="material-icons-round">psychology</span>
             </div>
             <div>
-              <h3 className="font-black text-sm uppercase tracking-widest">GRAD+ INTELIGENCIJA</h3>
-              <p className="text-[10px] opacity-60 font-bold uppercase tracking-widest">Powered by Gemini 3</p>
+              <h3 className="font-black text-sm uppercase tracking-widest">GRAĐANI+ INTELIGENCIJA</h3>
+              <p className="text-[10px] opacity-60 font-bold uppercase tracking-widest">Powered by DeepSeek v3.2</p>
             </div>
           </div>
           <button onClick={onClose} className="w-10 h-10 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 flex items-center justify-center transition-all">

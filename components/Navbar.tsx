@@ -1,8 +1,9 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CityConfig, User, Notification, UserRole } from '../types';
 import { CITIES } from '../constants';
+import { citiesAPI } from '../services/api';
 
 interface NavbarProps {
   user: User;
@@ -22,9 +23,59 @@ const Navbar: React.FC<NavbarProps> = ({
   user, selectedCity, onCityChange, onLogout, notifications, onClearNotifications,
   onSearch, onToggleTheme, onOpenAI, onOpenAccessibility, currentTheme
 }) => {
+  // Helper: compute readable text color for a foreground on a background
+  const hexToRgb = (hex: string) => {
+    const clean = hex.replace('#', '');
+    const bigint = parseInt(clean.length === 3 ? clean.split('').map(c => c+c).join('') : clean, 16);
+    return { r: (bigint >> 16) & 255, g: (bigint >> 8) & 255, b: bigint & 255 };
+  };
+
+  const luminance = (r: number, g: number, b: number) => {
+    const a = [r, g, b].map(v => {
+      const s = v / 255;
+      return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2];
+  };
+
+  const contrastRatio = (hex1: string, hex2: string) => {
+    try {
+      const c1 = hexToRgb(hex1);
+      const c2 = hexToRgb(hex2);
+      const L1 = luminance(c1.r, c1.g, c1.b);
+      const L2 = luminance(c2.r, c2.g, c2.b);
+      const lighter = Math.max(L1, L2);
+      const darker = Math.min(L1, L2);
+      return (lighter + 0.05) / (darker + 0.05);
+    } catch (e) {
+      return 1;
+    }
+  };
+
+  const getReadableColor = (fgHex: string, bgHex: string) => {
+    const ratio = contrastRatio(fgHex, bgHex);
+    if (ratio >= 4.5) return fgHex;
+    const blackRatio = contrastRatio('#000000', bgHex);
+    const whiteRatio = contrastRatio('#ffffff', bgHex);
+    return blackRatio > whiteRatio ? '#000000' : '#ffffff';
+  };
   const [showCityPicker, setShowCityPicker] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [availableCities, setAvailableCities] = useState<CityConfig[]>(CITIES);
   const spring = { type: "spring", stiffness: 400, damping: 40 } as const;
+
+  useEffect(() => {
+    const fetchCityNames = async () => {
+      const dbCities = await citiesAPI.getAll();
+      if (dbCities.length > 0) {
+        setAvailableCities(prev => prev.map(city => {
+          const found = dbCities.find(dbCity => dbCity.id === city.id);
+          return found ? { ...city, name: found.name } : city;
+        }));
+      }
+    };
+    fetchCityNames();
+  }, []);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
@@ -78,7 +129,7 @@ const Navbar: React.FC<NavbarProps> = ({
                     <p className="px-4 py-2 text-[9px] font-black text-gray-400 uppercase tracking-[0.5em] mb-6">Administracija Regija (7)</p>
                   )}
                   <div className="grid grid-cols-2 gap-3">
-                    {CITIES.map(city => (
+                    {availableCities.map(city => (
                       <button 
                         key={city.id}
                         onClick={() => { onCityChange(city); setShowCityPicker(false); }}
@@ -88,12 +139,25 @@ const Navbar: React.FC<NavbarProps> = ({
                           : 'hover:bg-gray-50 dark:hover:bg-white/5 border border-transparent'
                         }`}
                       >
-                         <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white shrink-0 shadow-md ${selectedCity.id === city.id ? 'bg-white/20' : ''}`} style={{ backgroundColor: selectedCity.id === city.id ? undefined : city.theme.primary }}>
+                         <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white shrink-0 shadow-md ${selectedCity.id === city.id ? 'bg-white/20' : ''}`} style={{ backgroundColor: city.theme.primary }}>
                            <span className="material-icons-round text-lg">{city.theme.culturalIcon}</span>
                          </div>
                          <div className="text-left">
-                           <span className={`block text-[11px] font-black uppercase tracking-widest ${selectedCity.id === city.id ? 'text-white' : 'text-gray-900 dark:text-white'}`} style={{ textShadow: selectedCity.id === city.id ? '0 1px 0 rgba(0,0,0,0.18)' : undefined }}>{city.name}</span>
-                           <span className={`text-[8px] font-bold uppercase ${selectedCity.id === city.id ? 'text-white/90' : 'text-gray-600 dark:text-gray-300'}`}>HR • 0{CITIES.indexOf(city) + 1}</span>
+                             <span
+                               className={`block text-[11px] font-black uppercase tracking-widest ${selectedCity.id === city.id ? 'text-white' : ''}`}
+                              style={{
+                                textShadow: selectedCity.id === city.id ? '0 1px 0 rgba(0,0,0,0.18)' : undefined,
+                                color: selectedCity.id === city.id ? undefined : getReadableColor(city.theme.primary, currentTheme === 'light' ? '#ffffff' : '#0a0a0c')
+                              }}
+                             >
+                               {city.name}
+                             </span>
+                              <span
+                                className={`text-[8px] font-bold uppercase ${selectedCity.id === city.id ? 'text-white/90' : ''}`}
+                                style={{ color: selectedCity.id === city.id ? undefined : getReadableColor(city.theme.primary, currentTheme === 'light' ? '#ffffff' : '#0a0a0c') }}
+                              >
+                                HR • 0{availableCities.indexOf(city) + 1}
+                              </span>
                          </div>
                       </button>
                     ))}
