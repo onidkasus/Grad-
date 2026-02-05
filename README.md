@@ -1,3 +1,16 @@
+<!-- TECHNOLOGIJE KORIŠTENE U PROJEKTU -->
+<p align="left">
+  <img src="https://raw.githubusercontent.com/marwin1991/profile-technology-icons/main/icons/nodejs.svg" alt="Node.js" title="Node.js" height="32"/>
+  <img src="https://raw.githubusercontent.com/marwin1991/profile-technology-icons/main/icons/npm.svg" alt="npm" title="npm" height="32"/>
+  <img src="https://raw.githubusercontent.com/marwin1991/profile-technology-icons/main/icons/react.svg" alt="React" title="React" height="32"/>
+  <img src="https://raw.githubusercontent.com/marwin1991/profile-technology-icons/main/icons/typescript.svg" alt="TypeScript" title="TypeScript" height="32"/>
+  <img src="https://raw.githubusercontent.com/marwin1991/profile-technology-icons/main/icons/tailwindcss.svg" alt="Tailwind CSS" title="Tailwind CSS" height="32"/>
+  <img src="https://raw.githubusercontent.com/marwin1991/profile-technology-icons/main/icons/firebase.svg" alt="Firebase" title="Firebase" height="32"/>
+  <img src="https://raw.githubusercontent.com/marwin1991/profile-technology-icons/main/icons/vite.svg" alt="Vite" title="Vite" height="32"/>
+  <img src="https://raw.githubusercontent.com/marwin1991/profile-technology-icons/main/icons/ollama.svg" alt="Ollama" title="Ollama" height="32"/>
+  <img src="https://raw.githubusercontent.com/marwin1991/profile-technology-icons/main/icons/framer.svg" alt="Framer Motion" title="Framer Motion" height="32"/>
+</p>
+
 # Kako pokrenuti lokalno
 
 ## Preduvjeti
