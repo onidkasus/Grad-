@@ -1,15 +1,16 @@
 <!-- TECHNOLOGIJE KORIŠTENE U PROJEKTU -->
-<p align="left">
-  <img src="https://raw.githubusercontent.com/marwin1991/profile-technology-icons/main/icons/nodejs.svg" alt="Node.js" title="Node.js" height="32"/>
-  <img src="https://raw.githubusercontent.com/marwin1991/profile-technology-icons/main/icons/npm.svg" alt="npm" title="npm" height="32"/>
-  <img src="https://raw.githubusercontent.com/marwin1991/profile-technology-icons/main/icons/react.svg" alt="React" title="React" height="32"/>
-  <img src="https://raw.githubusercontent.com/marwin1991/profile-technology-icons/main/icons/typescript.svg" alt="TypeScript" title="TypeScript" height="32"/>
-  <img src="https://raw.githubusercontent.com/marwin1991/profile-technology-icons/main/icons/tailwindcss.svg" alt="Tailwind CSS" title="Tailwind CSS" height="32"/>
-  <img src="https://raw.githubusercontent.com/marwin1991/profile-technology-icons/main/icons/firebase.svg" alt="Firebase" title="Firebase" height="32"/>
-  <img src="https://raw.githubusercontent.com/marwin1991/profile-technology-icons/main/icons/vite.svg" alt="Vite" title="Vite" height="32"/>
-  <img src="https://raw.githubusercontent.com/marwin1991/profile-technology-icons/main/icons/ollama.svg" alt="Ollama" title="Ollama" height="32"/>
-  <img src="https://raw.githubusercontent.com/marwin1991/profile-technology-icons/main/icons/framer.svg" alt="Framer Motion" title="Framer Motion" height="32"/>
-</p>
+<div align="center">
+	<code><img width="50" src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRPznwv7OeqDgGjrlZfT28XyX4J9oJyZ9TYwg&s" alt="Motion" title="Motion"/></code>
+	<code><img width="50" src="https://raw.githubusercontent.com/marwin1991/profile-technology-icons/refs/heads/main/icons/firebase.png" alt="Firebase" title="Firebase"/></code>
+	<code><img width="50" src="https://raw.githubusercontent.com/marwin1991/profile-technology-icons/refs/heads/main/icons/vite.png" alt="Vite" title="Vite"/></code>
+	<code><img width="50" src="https://raw.githubusercontent.com/marwin1991/profile-technology-icons/refs/heads/main/icons/typescript.png" alt="TypeScript" title="TypeScript"/></code>
+   <code><img width="50" src="https://raw.githubusercontent.com/marwin1991/profile-technology-icons/refs/heads/main/icons/tailwind_css.png" alt="Tailwind CSS" title="Tailwind CSS"/></code>
+	<code><img width="50" src="https://raw.githubusercontent.com/marwin1991/profile-technology-icons/refs/heads/main/icons/tailwind_css.png" alt="Tailwind CSS" title="Tailwind CSS"/></code>
+	<code><img width="50" src="https://raw.githubusercontent.com/marwin1991/profile-technology-icons/refs/heads/main/icons/react.png" alt="React" title="React"/></code>
+	<code><img width="50" src="https://raw.githubusercontent.com/marwin1991/profile-technology-icons/refs/heads/main/icons/node_js.png" alt="Node.js" title="Node.js"/></code>
+	<code><img width="50" src="https://raw.githubusercontent.com/marwin1991/profile-technology-icons/refs/heads/main/icons/npm.png" alt="npm" title="npm"/></code>
+   <code><img width="50" src="https://raw.githubusercontent.com/lobehub/lobe-icons/refs/heads/master/packages/static-png/dark/ollama.png" alt="Ollama" title="Ollama"/></code>
+</div>
 
 # Kako pokrenuti lokalno
 
