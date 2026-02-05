@@ -207,3 +207,14 @@ export interface Mission {
   duration_end: string; // ISO string
   cityID?: number;
 }
+
+export interface CityEvent {
+  id: string;
+  cityId: string;
+  title: string;
+  description: string;
+  date: any; // Timestamp from firebase usually
+  type: 'ELECTION' | 'PUBLIC_HEARING' | 'EVENT' | 'HOLIDAY';
+  createdBy: string;
+}
+

@@ -13,7 +13,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, userRole, ci
   const citizenItems = [
     { id: 'dashboard', icon: 'dashboard', label: 'Pregled' },
     { id: 'vault', icon: 'lock', label: 'Digitalni Sef' },
-    { id: 'fiscal', icon: 'account_balance', label: 'Gradski Proračun' },
+    { id: 'fiscal', icon: 'calendar_month', label: 'Gradski Kalendar' },
     { id: 'inspection', icon: 'manage_search', label: 'Inspekcija Tvrtki' },
     { id: 'missions', icon: 'flag', label: 'Misije' },
     { id: 'challenges', icon: 'location_city', label: 'Gradski Izazovi' },

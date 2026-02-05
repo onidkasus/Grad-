@@ -19,7 +19,7 @@ import AdminPortal from './components/AdminPortal';
 import UserAccount from './components/UserAccount';
 import AIAssistant from './components/AIAssistant';
 import Onboarding from './components/Onboarding';
-import FiscalDashboard from './components/FiscalDashboard';
+import CityCalendar from './components/CityCalendar';
 import CompanyInspection from './components/CompanyInspection';
 import CommandPalette from './components/CommandPalette';
 import AccessibilityMenu from './components/AccessibilityMenu';
@@ -246,7 +246,7 @@ const App: React.FC = () => {
               transition={spring}
             >
               {activeTab === 'dashboard' && <Dashboard user={user} ideas={ideas} challenges={challenges} city={selectedCity} showToast={showToast} setActiveTab={setActiveTab} onOpenAI={() => setShowAIAssistant(true)} />}
-              {activeTab === 'fiscal' && <FiscalDashboard city={selectedCity} showToast={showToast} />}
+              {activeTab === 'fiscal' && <CityCalendar city={selectedCity} showToast={showToast} user={user} />}
               {activeTab === 'inspection' && <CompanyInspection showToast={showToast} />}
               {activeTab === 'missions' && <Missions user={user} cityId={selectedCity.id} />}
               {activeTab === 'challenges' && <ChallengesList challenges={challenges} city={selectedCity} user={user} onSubmitIdea={handleChallengeIdeaSubmission} ideas={ideas} />}

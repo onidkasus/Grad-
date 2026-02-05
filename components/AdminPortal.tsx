@@ -1,4 +1,16 @@
+// If you use date input fields in this file, import DateInput for dd/MM/yyyy
+import DateInput from './DateInput';
 import { useState, useMemo } from 'react';
+// Helper for dd/mm/yyyy
+function formatDate(dateStr: string | Date | undefined): string {
+  if (!dateStr) return '';
+  const d = typeof dateStr === 'string' ? new Date(dateStr) : dateStr;
+  if (isNaN(d.getTime())) return '';
+  const day = d.getDate().toString().padStart(2, '0');
+  const month = (d.getMonth() + 1).toString().padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
+}
 import { motion, AnimatePresence } from 'framer-motion';
 import { Idea, Challenge, CityConfig, Category, IncubatorStage } from '../types';
 import { CITIES } from '../constants';
@@ -200,7 +212,7 @@ const AdminPortal: React.FC<AdminPortalProps> = ({ ideas, setIdeas, challenges, 
                             <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md ${selectedSubmissionId === idea.id ? 'bg-white/20 text-white' : 'bg-blue-50 text-blue-600'}`}>
                               {idea.category}
                             </span>
-                            <span className={`text-[8px] font-bold ${selectedSubmissionId === idea.id ? 'text-white/40' : 'text-gray-300'}`}>{idea.date}</span>
+                            <span className={`text-[8px] font-bold ${selectedSubmissionId === idea.id ? 'text-white/40' : 'text-gray-300'}`}>{formatDate(idea.date)}</span>
                          </div>
                          <h4 className="font-black text-sm tracking-tight leading-tight line-clamp-1 mb-1">{idea.title}</h4>
                          <p className={`text-[10px] font-bold ${selectedSubmissionId === idea.id ? 'text-white/50' : 'text-gray-400'}`}>Od: {idea.author}</p>
@@ -226,6 +238,7 @@ const AdminPortal: React.FC<AdminPortalProps> = ({ ideas, setIdeas, challenges, 
                              <div>
                                 <h3 className="text-4xl font-black text-gray-900 tracking-tighter leading-none mb-3">{selectedSubmission.title}</h3>
                                 <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest">Digitalni Podnositelj: <span className="text-blue-600">{selectedSubmission.author}</span> • NIAS Verificirano</p>
+                                <p className="text-[10px] font-black text-gray-400 mt-1">Datum: <span className="text-gray-900">{formatDate(selectedSubmission.date)}</span></p>
                              </div>
                           </div>
                           <div className="flex gap-3">
@@ -307,6 +320,10 @@ const AdminPortal: React.FC<AdminPortalProps> = ({ ideas, setIdeas, challenges, 
                     {stageIdeas.map(idea => (
                       <div key={idea.id} className="bg-white p-7 rounded-[2.2rem] shadow-sm border border-gray-100 transition-all hover:shadow-2xl hover:scale-[1.02]">
                         <h5 className="font-black text-gray-900 text-sm mb-4 leading-tight tracking-tight line-clamp-2">{idea.title}</h5>
+                                              <h5 className="font-black text-gray-900 text-sm mb-2 leading-tight tracking-tight line-clamp-2">{idea.title}</h5>
+                                              {idea.date && (
+                                                <p className="text-[10px] text-gray-400 font-bold mb-2">{formatDate(idea.date)}</p>
+                                              )}
                       </div>
                     ))}
                   </div>

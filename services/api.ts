@@ -1,4 +1,4 @@
-import { User, Idea, Challenge, Poll, Notification, UserRole, IncubatorStage, Category, Post, Badge, PostComment } from '../types';
+import { User, Idea, Challenge, Poll, Notification, UserRole, IncubatorStage, Category, Post, Badge, PostComment, CityEvent } from '../types';
 import { BADGES } from '../constants';
 import { db } from './firebase';
 import { AiService } from './aiService';
@@ -591,3 +591,44 @@ export const citiesAPI = {
     }
   }
 };
+
+export const eventsAPI = {
+  getAll: async (cityId?: string): Promise<CityEvent[]> => {
+    try {
+      const ref = collection(db, "events");
+      let q = query(ref);
+      if (cityId) {
+        q = query(ref, where("cityId", "==", cityId));
+      }
+      
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          cityId: data.cityId,
+          title: data.title,
+          description: data.description,
+          date: data.date, // Timestamp or string, handled in UI
+          type: data.type,
+          createdBy: data.createdBy
+        } as CityEvent;
+      });
+    } catch (e) {
+      console.error("Error fetching events:", e);
+      return [];
+    }
+  },
+
+  add: async (event: Omit<CityEvent, 'id'>): Promise<string> => {
+    try {
+      const ref = collection(db, "events");
+      const docRef = await addDoc(ref, event);
+     return docRef.id;
+    } catch (e) {
+      console.error("Error adding event:", e);
+      throw e;
+    }
+  }
+};
+
