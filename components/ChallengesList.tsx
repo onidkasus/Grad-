@@ -3,6 +3,20 @@ import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Challenge, CityConfig, Category, Idea, IncubatorStage, User } from '../types';
 
+// Helper for dd/mm/yyyy
+function formatDate(dateStr: string | Date | undefined): string {
+  if (!dateStr) return '';
+  // Check if it's "TBD" or similar text
+  if (typeof dateStr === 'string' && !dateStr.includes('-')) return dateStr;
+
+  const d = typeof dateStr === 'string' ? new Date(dateStr) : dateStr;
+  if (isNaN(d.getTime())) return dateStr as string;
+  const day = d.getDate().toString().padStart(2, '0');
+  const month = (d.getMonth() + 1).toString().padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
+}
+
 interface ChallengesListProps {
   challenges: Challenge[];
   city: CityConfig;
@@ -53,7 +67,7 @@ const ChallengesList: React.FC<ChallengesListProps> = ({ challenges, city, user,
       <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4">
         <div>
           <h2 className="text-3xl font-extrabold text-gray-900 mb-2 tracking-tight">Aktivni Gradski Izazovi</h2>
-          <p className="text-gray-500 font-medium">Odaberite misiju i doprinesite gradu {city.name} kroz inovacije.</p>
+          <p className="text-gray-500 font-medium">Odaberite izazov i doprinesite gradu {city.name} kroz inovacije.</p>
         </div>
       </div>
 
@@ -76,7 +90,7 @@ const ChallengesList: React.FC<ChallengesListProps> = ({ challenges, city, user,
                       {challenge.category}
                     </span>
                     {hasApplied && (
-                      <span className="text-[8px] font-black uppercase tracking-tighter text-green-600 bg-green-50 px-2 py-0.5 rounded">Moja Misija</span>
+                      <span className="text-[8px] font-black uppercase tracking-tighter text-green-600 bg-green-50 px-2 py-0.5 rounded">Moj Izazov</span>
                     )}
                   </div>
                 </div>
@@ -90,7 +104,7 @@ const ChallengesList: React.FC<ChallengesListProps> = ({ challenges, city, user,
 
                 <div className="space-y-4 mb-8">
                   <div className="flex justify-between items-end mb-1">
-                    <span className="text-xs font-black text-gray-400 uppercase tracking-widest">Napredak misije</span>
+                    <span className="text-xs font-black text-gray-400 uppercase tracking-widest">Napredak izazova</span>
                     <span className="text-sm font-black" style={{ color: city.theme.primary }}>{challenge.progress}%</span>
                   </div>
                   <div className="w-full h-2 bg-gray-50 rounded-full overflow-hidden">
@@ -101,7 +115,7 @@ const ChallengesList: React.FC<ChallengesListProps> = ({ challenges, city, user,
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-gray-50 rounded-2xl p-4">
                     <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Rok</p>
-                    <p className="text-sm font-black text-gray-900">{challenge.deadline}</p>
+                    <p className="text-sm font-black text-gray-900">{formatDate(challenge.deadline)}</p>
                   </div>
                   <div className="bg-gray-50 rounded-2xl p-4">
                     <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Grant Fond</p>
@@ -122,7 +136,7 @@ const ChallengesList: React.FC<ChallengesListProps> = ({ challenges, city, user,
                   onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = city.theme.primary)}
                   onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '')}
                 >
-                  Pridruži se misiji
+                  Pridruži se izazovu
                   <span className="material-icons-round text-lg">arrow_forward</span>
                 </button>
               )}
@@ -152,7 +166,7 @@ const ChallengesList: React.FC<ChallengesListProps> = ({ challenges, city, user,
               <div className="flex justify-between items-start mb-8">
                 <div>
                    <h3 className="text-2xl font-black text-gray-900 tracking-tight mb-2">Prijavi rješenje</h3>
-                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Za misiju: {selectedChallenge.title}</p>
+                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Za izazov: {selectedChallenge.title}</p>
                 </div>
                 <button onClick={() => setSelectedChallenge(null)} className="w-10 h-10 rounded-full bg-gray-50 text-gray-400 flex items-center justify-center hover:bg-red-50 hover:text-red-500 transition-all">
                   <span className="material-icons-round">close</span>

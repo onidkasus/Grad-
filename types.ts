@@ -199,15 +199,6 @@ export interface DigitalDocument {
   fileType: 'PDF' | 'IMAGE';
 }
 
-export interface Mission {
-  id: string;
-  name: string;
-  desc: string;
-  duration_begin: string; // ISO string 
-  duration_end: string; // ISO string
-  cityID?: number;
-}
-
 export interface CityEvent {
   id: string;
   cityId: string;

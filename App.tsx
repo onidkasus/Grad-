@@ -24,7 +24,6 @@ import CompanyInspection from './components/CompanyInspection';
 import CommandPalette from './components/CommandPalette';
 import AccessibilityMenu from './components/AccessibilityMenu';
 import DigitalVault from './components/DigitalVault';
-import Missions from './components/Missions';
 
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -248,7 +247,6 @@ const App: React.FC = () => {
               {activeTab === 'dashboard' && <Dashboard user={user} ideas={ideas} challenges={challenges} city={selectedCity} showToast={showToast} setActiveTab={setActiveTab} onOpenAI={() => setShowAIAssistant(true)} />}
               {activeTab === 'fiscal' && <CityCalendar city={selectedCity} showToast={showToast} user={user} />}
               {activeTab === 'inspection' && <CompanyInspection showToast={showToast} />}
-              {activeTab === 'missions' && <Missions user={user} cityId={selectedCity.id} />}
               {activeTab === 'challenges' && <ChallengesList challenges={challenges} city={selectedCity} user={user} onSubmitIdea={handleChallengeIdeaSubmission} ideas={ideas} />}
               {activeTab === 'incubator' && <IdeaIncubator ideas={ideas} setIdeas={handleIdeasUpdate} isReadOnly={user.role === UserRole.CITIZEN} city={selectedCity} />}
               {activeTab === 'community' && <Community ideas={ideas} setIdeas={handleIdeasUpdate} city={selectedCity} polls={polls} onVote={() => showToast('Glas uspješan!', 'success')} user={user} showToast={showToast} />}

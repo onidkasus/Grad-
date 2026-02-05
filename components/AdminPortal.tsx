@@ -14,7 +14,7 @@ function formatDate(dateStr: string | Date | undefined): string {
 import { motion, AnimatePresence } from 'framer-motion';
 import { Idea, Challenge, CityConfig, Category, IncubatorStage } from '../types';
 import { CITIES } from '../constants';
-import { ideasAPI } from '../services/api';
+import { ideasAPI, challengesAPI } from '../services/api';
 
 interface AdminPortalProps {
   ideas: Idea[];
@@ -26,9 +26,43 @@ interface AdminPortalProps {
 }
 
 const AdminPortal: React.FC<AdminPortalProps> = ({ ideas, setIdeas, challenges, setChallenges, city, showToast }) => {
-  const [activeTab, setActiveTab] = useState<'submissions' | 'missions' | 'incubator' | 'global'>('submissions');
+  const [activeTab, setActiveTab] = useState<'submissions' | 'challenges' | 'incubator' | 'global'>('submissions');
   const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(null);
   const [adminContext, setAdminContext] = useState<string>(city.id); // Default to user city
+  const [showChallengeModal, setShowChallengeModal] = useState(false);
+  const [newChallenge, setNewChallenge] = useState<Partial<Challenge>>({
+      title: '',
+      description: '',
+      category: Category.URBAN,
+      priority: 'Srednje',
+      fund: '0 €',
+      deadline: ''
+  });
+
+  const handleAddChallenge = async () => {
+    if(!newChallenge.title || !newChallenge.description) return;
+    try {
+        const added = await challengesAPI.add({
+            cityId: adminContext,
+            title: newChallenge.title || '',
+            description: newChallenge.description || '',
+            category: (newChallenge.category as Category) || Category.URBAN,
+            priority: (newChallenge.priority as any) || 'Srednje',
+            fund: newChallenge.fund || '0 €',
+            deadline: newChallenge.deadline || 'TBD',
+            progress: 0,
+            featured: false,
+        } as any);
+        
+        setChallenges(prev => [...prev, added]);
+        setShowChallengeModal(false);
+        setNewChallenge({ title: '', description: '', category: Category.URBAN, priority: 'Srednje', fund: '0 €', deadline: '' });
+        showToast('Izazov uspješno dodan!', 'success');
+    } catch(e) {
+        showToast('Greška kod dodavanja.', 'info');
+    }
+  };
+
 
   const filteredIdeas = useMemo(() => ideas.filter(i => i.cityId === adminContext), [ideas, adminContext]);
   const pendingIdeas = useMemo(() => filteredIdeas.filter(i => i.status === 'PENDING'), [filteredIdeas]);
@@ -105,7 +139,7 @@ const AdminPortal: React.FC<AdminPortalProps> = ({ ideas, setIdeas, challenges, 
         <div className="flex p-1.5 bg-gray-200/50 rounded-[2rem] border border-gray-200 overflow-x-auto max-w-full">
           {[
             { id: 'submissions', label: `Prijave (${pendingIdeas.length})`, icon: 'inbox' },
-            { id: 'missions', label: 'Misije', icon: 'rocket_launch' },
+            { id: 'challenges', label: 'Gradski Izazovi', icon: 'location_city' },
             { id: 'incubator', label: 'Inkubator', icon: 'grid_view' },
             { id: 'global', label: 'Nacionalni Pregled', icon: 'public' }
           ].map(tab => (
@@ -268,10 +302,26 @@ const AdminPortal: React.FC<AdminPortalProps> = ({ ideas, setIdeas, challenges, 
           </motion.div>
         )}
 
-        {/* Missions and Incubator remain similar but filtered by adminContext */}
-        {activeTab === 'missions' && (
+        {/* Challenges and Incubator remain similar but filtered by adminContext */}
+        {activeTab === 'challenges' && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100">
+                <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                        <span className="material-icons-round">location_city</span>
+                    </div>
+                    <div>
+                        <h4 className="font-black text-gray-900 text-lg">Upravljanje Izazovima</h4>
+                        <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-2">Dodaj nove inicijative za grad</p>
+                    </div>
+                </div>
+                <button onClick={() => setShowChallengeModal(true)} className="px-6 py-3 bg-gray-900 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:scale-105 transition-transform shadow-lg flex items-center">
+                    <span className="material-icons-round text-sm mr-2">add</span>
+                    Novi Izazov
+                </button>
+            </div>
           <motion.div 
-            key="missions"
+            key="challenges"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
@@ -282,7 +332,7 @@ const AdminPortal: React.FC<AdminPortalProps> = ({ ideas, setIdeas, challenges, 
                <div key={challenge.id} className="bg-white rounded-[3rem] p-10 border border-gray-100 shadow-sm flex flex-col md:flex-row items-center justify-between group hover:shadow-2xl transition-all">
                   <div className="flex items-center gap-10">
                      <div className="w-20 h-20 rounded-[2rem] bg-gray-50 flex items-center justify-center text-gray-300 group-hover:bg-blue-600 group-hover:text-white transition-all shadow-inner">
-                        <span className="material-icons-round text-3xl">rocket_launch</span>
+                        <span className="material-icons-round text-3xl">location_city</span>
                      </div>
                      <div>
                         <h4 className="text-2xl font-black text-gray-900 tracking-tighter">{challenge.title}</h4>
@@ -298,7 +348,9 @@ const AdminPortal: React.FC<AdminPortalProps> = ({ ideas, setIdeas, challenges, 
                </div>
              ))}
           </motion.div>
+          </div>
         )}
+
 
         {activeTab === 'incubator' && (
           <motion.div 
@@ -319,13 +371,13 @@ const AdminPortal: React.FC<AdminPortalProps> = ({ ideas, setIdeas, challenges, 
                   <div className="flex-1 bg-gray-50/50 rounded-[3.5rem] p-5 border border-gray-100/50 space-y-5">
                     {stageIdeas.map(idea => (
                       <div key={idea.id} className="bg-white p-7 rounded-[2.2rem] shadow-sm border border-gray-100 transition-all hover:shadow-2xl hover:scale-[1.02]">
-                        <h5 className="font-black text-gray-900 text-sm mb-4 leading-tight tracking-tight line-clamp-2">{idea.title}</h5>
                                               <h5 className="font-black text-gray-900 text-sm mb-2 leading-tight tracking-tight line-clamp-2">{idea.title}</h5>
                                               {idea.date && (
                                                 <p className="text-[10px] text-gray-400 font-bold mb-2">{formatDate(idea.date)}</p>
                                               )}
                       </div>
                     ))}
+
                   </div>
                 </div>
               );
@@ -333,7 +385,114 @@ const AdminPortal: React.FC<AdminPortalProps> = ({ ideas, setIdeas, challenges, 
           </motion.div>
         )}
       </AnimatePresence>
+
+      <AnimatePresence>
+        {showChallengeModal && (
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }} 
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }} 
+              animate={{ scale: 1, opacity: 1 }} 
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-[2rem] p-8 w-full max-w-md shadow-2xl h-[90vh] overflow-y-auto custom-scrollbar"
+            >
+              <div className="flex justify-between items-center mb-6">
+                 <h3 className="text-2xl font-black text-gray-900">Novi Izazov</h3>
+                 <button onClick={() => setShowChallengeModal(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                    <span className="material-icons-round">close</span>
+                 </button>
+              </div>
+              
+              <div className="space-y-4">
+                  <div>
+                      <label className="text-[10px] uppercase font-black tracking-widest text-gray-400 mb-1 block">Naziv</label>
+                      <input 
+                        type="text" 
+                        value={newChallenge.title}
+                        onChange={e => setNewChallenge({...newChallenge, title: e.target.value})}
+                        className="w-full p-4 bg-gray-50 rounded-xl font-bold border-none focus:ring-2 focus:ring-blue-500" 
+                        placeholder="Naziv izazova..."
+                      />
+                  </div>
+                   <div>
+                      <label className="text-[10px] uppercase font-black tracking-widest text-gray-400 mb-1 block">Opis</label>
+                      <textarea 
+                        value={newChallenge.description}
+                        onChange={e => setNewChallenge({...newChallenge, description: e.target.value})}
+                        className="w-full p-4 bg-gray-50 rounded-xl font-medium border-none focus:ring-2 focus:ring-blue-500 h-24 resize-none" 
+                        placeholder="Detalji..."
+                      />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                     <div>
+                        <label className="text-[10px] uppercase font-black tracking-widest text-gray-400 mb-1 block">Kategorija</label>
+                        <select
+                            value={newChallenge.category}
+                            onChange={e => setNewChallenge({...newChallenge, category: e.target.value as Category})}
+                            className="w-full p-4 bg-gray-50 rounded-xl font-bold border-none focus:ring-2 focus:ring-blue-500"
+                        >
+                            {Object.values(Category).map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                     </div>
+                     <div>
+                        <label className="text-[10px] uppercase font-black tracking-widest text-gray-400 mb-1 block">Prioritet</label>
+                        <select
+                            value={newChallenge.priority}
+                            onChange={e => setNewChallenge({...newChallenge, priority: e.target.value as any})}
+                            className="w-full p-4 bg-gray-50 rounded-xl font-bold border-none focus:ring-2 focus:ring-blue-500"
+                        >
+                            <option value="Nisko">Nisko</option>
+                            <option value="Srednje">Srednje</option>
+                            <option value="Visoko">Visoko</option>
+                            <option value="Kritično">Kritično</option>
+                        </select>
+                     </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <label className="text-[10px] uppercase font-black tracking-widest text-gray-400 mb-1 block">Fond (€)</label>
+                        <input 
+                            type="text" 
+                            value={newChallenge.fund}
+                            onChange={e => setNewChallenge({...newChallenge, fund: e.target.value})}
+                            className="w-full p-4 bg-gray-50 rounded-xl font-bold border-none focus:ring-2 focus:ring-blue-500" 
+                            placeholder="e.g. 50.000 €"
+                        />
+                    </div>
+                    <div>
+                         <label className="text-[10px] uppercase font-black tracking-widest text-gray-400 mb-1 block">Rok</label>
+                         <DateInput
+                            value={newChallenge.deadline}
+                            onChange={(date: any) => setNewChallenge({...newChallenge, deadline: date ? date.toISOString() : ''})}
+                            className="w-full p-4 bg-gray-50 rounded-xl font-bold border-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="Odaberi rok"
+                            minDate={new Date()}
+                            maxDate={null}
+                         />
+                    </div>
+                  </div>
+
+                  <div className="pt-4 flex gap-4">
+                      <button onClick={() => setShowChallengeModal(false)} className="flex-1 py-4 font-bold text-gray-500 hover:bg-gray-50 rounded-xl transition-colors">Odustani</button>
+                      <button 
+                        onClick={handleAddChallenge} 
+                        disabled={!newChallenge.title || !newChallenge.description}
+                        className="flex-1 py-4 bg-gray-900 text-white font-bold rounded-xl shadow-lg hover:bg-black transition-colors disabled:opacity-50"
+                      >
+                          Dodaj Izazov
+                      </button>
+                  </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
+
   );
 };
 

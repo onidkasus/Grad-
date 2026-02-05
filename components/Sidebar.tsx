@@ -15,7 +15,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, userRole, ci
     { id: 'vault', icon: 'lock', label: 'Digitalni Sef' },
     { id: 'fiscal', icon: 'calendar_month', label: 'Gradski Kalendar' },
     { id: 'inspection', icon: 'manage_search', label: 'Inspekcija Tvrtki' },
-    { id: 'missions', icon: 'flag', label: 'Misije' },
     { id: 'challenges', icon: 'location_city', label: 'Gradski Izazovi' },
     { id: 'incubator', icon: 'psychology', label: 'Inkubator Ideja' },
     { id: 'community', icon: 'forum', label: 'Zajednica' },

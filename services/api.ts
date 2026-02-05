@@ -366,8 +366,40 @@ export const challengesAPI = {
       console.error("Error fetching challenges:", e);
       return [];
     }
+  },
+
+  add: async (challenge: Omit<Challenge, 'id' | 'ideasCount' | 'created_at'>): Promise<Challenge> => {
+    try {
+        const cityNum = getCityNumber(challenge.cityId);
+        const data = {
+            cityID: cityNum,
+            title: challenge.title,
+            desc: challenge.description, // Mapping to DB field desc
+            category: challenge.category,
+            progress: challenge.progress,
+            deadline: challenge.deadline,
+            priority: challenge.priority,
+            fund: challenge.fund,
+            featured: challenge.featured,
+            isActive: true,
+            ideasCount: 0,
+            createdAt: serverTimestamp()
+        };
+        const ref = await addDoc(collection(db, "challenges"), data);
+        
+        return {
+            ...challenge,
+            id: ref.id,
+            ideasCount: 0,
+            created_at: new Date().toISOString()
+        };
+    } catch (e) {
+        console.error("Error adding challenge:", e);
+        throw e;
+    }
   }
 };
+
 
 export const pollsAPI = {
   getAll: async (cityId?: string): Promise<Poll[]> => {
