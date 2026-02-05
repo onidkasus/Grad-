@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CityConfig, User, Notification, UserRole } from '../types';
 import { CITIES } from '../constants';
-import { citiesAPI } from '../services/api';
+import { citiesAPI, getInitials } from '../services/api';
 
 interface NavbarProps {
   user: User;
@@ -91,8 +91,8 @@ const Navbar: React.FC<NavbarProps> = ({
       <div className="flex items-center gap-12">
         <div className="relative">
           <button 
-            onClick={() => user.cityID === 0 && setShowCityPicker(!showCityPicker)}
-            className={`flex items-center gap-4 group text-left outline-none ${user.cityID !== 0 ? 'cursor-default' : 'cursor-pointer'}`}
+            onClick={() => (user.role === UserRole.ADMIN || user.cityID === 0) && setShowCityPicker(!showCityPicker)}
+            className={`flex items-center gap-4 group text-left outline-none ${!(user.role === UserRole.ADMIN || user.cityID === 0) ? 'cursor-default' : 'cursor-pointer'}`}
           >
              <motion.div 
                whileHover={{ rotate: 5, scale: 1.05 }}
@@ -104,7 +104,7 @@ const Navbar: React.FC<NavbarProps> = ({
              <div>
                 <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.4em] leading-none mb-1.5 flex items-center gap-1">
                   RH • Regija {selectedCity.name} 
-                  {user.cityID === 0 && (
+                  {(user.role === UserRole.ADMIN || user.cityID === 0) && (
                     <span className="material-icons-round text-[10px] group-hover:translate-y-0.5 transition-transform text-blue-600">expand_more</span>
                   )}
                 </p>
@@ -264,7 +264,7 @@ const Navbar: React.FC<NavbarProps> = ({
             onClick={onLogout}
             className="w-12 h-12 rounded-[1.4rem] flex items-center justify-center text-white font-black shadow-2xl hover:scale-105 active:scale-95 transition-all bg-black text-xs"
           >
-            {user.avatar}
+            {user.avatar === 'NM' ? getInitials(user.name) : user.avatar}
           </button>
         </div>
       </div>

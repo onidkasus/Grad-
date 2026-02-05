@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { User, CityConfig } from '../types';
+import { getInitials } from '../services/api';
 
 interface UserAccountProps {
   user: User;
@@ -28,7 +29,7 @@ const UserAccount: React.FC<UserAccountProps> = ({ user, setUser, city, showToas
         <div className="flex flex-col md:flex-row items-center gap-10 relative z-10">
           <div className="w-40 h-40 rounded-full bg-gradient-to-br from-blue-600 to-cyan-400 p-2 shadow-2xl group transition-transform hover:rotate-3">
             <div className="w-full h-full bg-white rounded-full flex items-center justify-center text-5xl font-black text-blue-600">
-              {user.avatar}
+              {user.avatar === 'NM' ? getInitials(user.name) : user.avatar}
             </div>
           </div>
           <div className="text-center md:text-left flex-1 w-full">

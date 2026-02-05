@@ -1,13 +1,29 @@
 import { db } from './firebase';
-import { collection, getDocs, addDoc, Timestamp } from 'firebase/firestore';
+import { collection, getDocs, addDoc, Timestamp, query, where } from 'firebase/firestore';
 import { Mission } from '../types';
 
 const COLLECTION_NAME = 'missions';
 
+// Helper: Map app string ID to numeric DB city ID
+const getCityNumber = (cityString: string) => {
+    switch(cityString) {
+        case 'split': return 2;
+        case 'rijeka': return 3;
+        case 'osijek': return 4;
+        case 'zadar': return 5;
+        case 'velika_gorica': return 6;
+        case 'slavonski_brod': return 7;
+        case 'zagreb': default: return 1; 
+    }
+}
+
 export const missionService = {
-  getAll: async (): Promise<Mission[]> => {
+  getAll: async (cityIdStr: string): Promise<Mission[]> => {
     try {
-      const querySnapshot = await getDocs(collection(db, COLLECTION_NAME));
+      const cityId = getCityNumber(cityIdStr);
+      const q = query(collection(db, COLLECTION_NAME), where('cityID', '==', cityId));
+      const querySnapshot = await getDocs(q);
+      
       return querySnapshot.docs.map(doc => {
         const data = doc.data();
         return {
@@ -24,13 +40,15 @@ export const missionService = {
     }
   },
 
-  add: async (name: string, desc: string, beginDate: Date, endDate: Date): Promise<string> => {
+  add: async (name: string, desc: string, beginDate: Date, endDate: Date, cityIdStr: string): Promise<string> => {
     try {
+      const cityId = getCityNumber(cityIdStr);
       const docRef = await addDoc(collection(db, COLLECTION_NAME), {
         name,
         desc,
         'duration-begin': Timestamp.fromDate(beginDate),
-        'duration-end': Timestamp.fromDate(endDate)
+        'duration-end': Timestamp.fromDate(endDate),
+        cityID: cityId
       });
       return docRef.id;
     } catch (error) {

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { CompanyData } from '../types';
 import CompanyService from '../services/companyService';
-import { INFOBIP_DATA } from '../constants';
+// import { INFOBIP_DATA } from '../constants';
 
 // Formatting helpers
 function formatCurrency(value: number): string {
@@ -70,7 +70,7 @@ const FinancialCard = ({ title, data, field, format, calculateGrowth, colorFunc 
 const CompanyInspection: React.FC<CompanyInspectionProps> = ({ showToast }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [currentCompany, setCurrentCompany] = useState<CompanyData | null>(INFOBIP_DATA);
+  const [currentCompany, setCurrentCompany] = useState<CompanyData | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
 
   const handleSearch = async () => {
@@ -81,30 +81,16 @@ const CompanyInspection: React.FC<CompanyInspectionProps> = ({ showToast }) => {
     setCurrentCompany(null);
 
     const query = searchQuery.trim();
-    const queryLower = query.toLowerCase();
-
     try {
-      // Use the service which scrapes via client-side proxy
       const data = await CompanyService.search(query);
       if (data) {
         setCurrentCompany(data);
       } else {
-        // Fallback for demo purposes if not found by scraper (e.g. Infobip might be blocked by scraping sometimes)
-        if (queryLower === 'infobip' || queryLower === 'infobip d.o.o.' || query === '29756659895') {
-            setCurrentCompany(INFOBIP_DATA);
-        } else {
-            setErrorMessage(`Company "${searchQuery}" not found. Try a different name or OIB.`);
-        }
+        setErrorMessage(`Tvrtka "${searchQuery}" nije pronađena.`);
       }
     } catch (error: any) {
       console.error('API error:', error);
-      // Fallback to demo data for Infobip if API fails
-      if (queryLower === 'infobip' || queryLower === 'infobip d.o.o.' || query === '29756659895') {
-        setCurrentCompany(INFOBIP_DATA);
-        setErrorMessage('');
-      } else {
-        setErrorMessage(`Error fetching data: ${error.message || 'Unknown error'}`);
-      }
+      setErrorMessage(`Greška pri dohvaćanju podataka: ${error.message || 'Nepoznata greška'}`);
     } finally {
       setIsLoading(false);
     }

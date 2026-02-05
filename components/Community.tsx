@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Idea, CityConfig, Category, IncubatorStage, Poll, User, Post } from '../types';
+import { Idea, CityConfig, Category, IncubatorStage, Poll, User, Post, PostComment } from '../types';
 import { communityAPI } from '../services/api';
 
 interface CommunityProps {
@@ -20,6 +19,10 @@ const Community: React.FC<CommunityProps> = ({ ideas, setIdeas, city, polls, onV
   // POSTS STATE
   const [posts, setPosts] = useState<Post[]>([]);
   const [newPostContent, setNewPostContent] = useState('');
+  
+  // Comment State
+  const [postComments, setPostComments] = useState<{[key: number]: PostComment[]}>({});
+  const [loadingComments, setLoadingComments] = useState<number | null>(null);
 
   // IDEA STATE
   const [newIdeaTitle, setNewIdeaTitle] = useState('');
@@ -28,7 +31,7 @@ const Community: React.FC<CommunityProps> = ({ ideas, setIdeas, city, polls, onV
   
   const [isPosting, setIsPosting] = useState(false);
   const [filter, setFilter] = useState('Sve');
-  const [activeCommentId, setActiveCommentId] = useState<string | null>(null);
+  const [activeCommentId, setActiveCommentId] = useState<string | null>(null); // storing id of post being commented on
   const [commentText, setCommentText] = useState('');
 
   useEffect(() => {
@@ -40,6 +43,23 @@ const Community: React.FC<CommunityProps> = ({ ideas, setIdeas, city, polls, onV
       loadPosts();
     }
   }, [viewMode, city.id]);
+
+  const loadCommentsForPost = async (postNo: number) => {
+      if (postComments[postNo]) return; // already loaded
+      setLoadingComments(postNo);
+      const comments = await communityAPI.getComments(postNo);
+      setPostComments(prev => ({...prev, [postNo]: comments}));
+      setLoadingComments(null);
+  };
+  
+  const toggleComments = (postId: string, postNo: number) => {
+      if (activeCommentId === postId) {
+          setActiveCommentId(null);
+      } else {
+          setActiveCommentId(postId);
+          loadCommentsForPost(postNo);
+      }
+  };
 
   const handleCreateIdea = () => {
     if (!newIdeaTitle.trim() || !newIdeaDesc.trim()) return;
@@ -89,6 +109,29 @@ const Community: React.FC<CommunityProps> = ({ ideas, setIdeas, city, polls, onV
   const handleLikePost = async (id: string) => {
     await communityAPI.likePost(id);
     setPosts(prev => prev.map(p => p.id === id ? { ...p, likes: p.likes + 1, likedByCurrentUser: true } : p));
+  };
+
+  const submitComment = async (postId: string, postNo: number) => {
+      if(!commentText.trim()) return;
+      
+      try {
+          const newComment = await communityAPI.addComment(postNo, commentText, user, postId);
+          
+          setPostComments(prev => ({
+              ...prev,
+              [postNo]: [...(prev[postNo] || []), newComment]
+          }));
+          
+          setPosts(prev => prev.map(p => 
+              p.id === postId ? { ...p, comments: p.comments + 1 } : p
+          ));
+
+          setCommentText('');
+          showToast('Komentar dodan', 'success');
+      } catch (e) {
+          console.error(e);
+          showToast('Greška kod objave komentara', 'info');
+      }
   };
 
   const handleCommentIdea = (ideaId: string) => {
@@ -311,53 +354,8 @@ const Community: React.FC<CommunityProps> = ({ ideas, setIdeas, city, polls, onV
                       </div>
                       <span className="text-xs font-black text-gray-900">{idea.likes}</span>
                     </button>
-                    <button 
-                      onClick={() => setActiveCommentId(activeCommentId === idea.id ? null : idea.id)}
-                      className="flex items-center gap-2 text-gray-400 hover:text-blue-500 transition-all group/btn"
-                    >
-                      <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center group-hover/btn:bg-blue-50 group-hover/btn:text-blue-500 transition-all">
-                         <span className="material-icons-round text-xl">forum</span>
-                      </div>
-                      <span className="text-xs font-black text-gray-900">{idea.comments.length}</span>
-                    </button>
                   </div>
                 </div>
-
-                {/* COMMENTS SECTION */}
-                <AnimatePresence>
-                  {activeCommentId === idea.id && (
-                    <motion.div 
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      className="overflow-hidden"
-                    >
-                      <div className="mt-6 pt-6 border-t border-gray-50 bg-gray-50/50 rounded-2xl p-6">
-                        <div className="space-y-4 mb-4">
-                          {idea.comments.map(comment => (
-                            <div key={comment.id} className="flex gap-3">
-                              <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center text-[10px] font-black">
-                                {comment.avatar}
-                              </div>
-                              <div className="flex-1 bg-white p-3 rounded-xl rounded-tl-none shadow-sm">
-                                <p className="text-xs text-gray-600 font-medium">{comment.text}</p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                        <div className="flex gap-2">
-                          <input 
-                            value={commentText}
-                            onChange={(e) => setCommentText(e.target.value)}
-                            onKeyPress={(e) => e.key === 'Enter' && handleCommentIdea(idea.id)}
-                            placeholder="Napišite komentar..."
-                            className="flex-1 px-4 py-2 text-xs bg-white border border-gray-200 rounded-xl focus:outline-none"
-                          />
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
               </motion.div>
             ))
           ) : (
@@ -374,19 +372,79 @@ const Community: React.FC<CommunityProps> = ({ ideas, setIdeas, city, polls, onV
                     {post.authorAvatar}
                   </div>
                   <div>
-                    <h4 className="text-sm font-black text-gray-900">{post.author}</h4>
-                    <p className="text-[10px] text-gray-400">{new Date(post.created_at).toLocaleDateString()}</p>
+                    <h4 className="text-sm font-black text-gray-900">{post.authorName}</h4>
+                    <p className="text-[10px] text-gray-400">{post.time}</p>
                   </div>
                 </div>
-                <p className="text-gray-700 text-base mb-6">{post.content}</p>
-                <div className="flex gap-4">
-                  <button onClick={() => handleLikePost(post.id)} className={`text-xs font-bold flex items-center gap-1 ${post.likedByCurrentUser ? 'text-red-500' : 'text-gray-400'}`}>
+                <p className="text-gray-700 text-base mb-6 font-medium leading-relaxed">{post.content}</p>
+                <div className="flex gap-4 border-t border-gray-50 pt-4">
+                  <button onClick={() => handleLikePost(post.id)} className={`text-xs font-bold flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors ${post.likedByCurrentUser ? 'text-red-500 bg-red-50' : 'text-gray-400 hover:bg-gray-50'}`}>
                     <span className="material-icons-round text-sm">favorite</span> {post.likes}
                   </button>
-                  <button className="text-xs font-bold text-gray-400 flex items-center gap-1">
-                    <span className="material-icons-round text-sm">comment</span> {post.commentsCount}
+                  <button 
+                    onClick={() => toggleComments(post.id, post.postNo)}
+                    className={`text-xs font-bold flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors ${activeCommentId === post.id ? 'text-blue-600 bg-blue-50' : 'text-gray-400 hover:bg-gray-50'}`}
+                  >
+                    <span className="material-icons-round text-sm">comment</span> {post.comments}
                   </button>
                 </div>
+
+                {/* POST COMMENTS */}
+                <AnimatePresence>
+                  {activeCommentId === post.id && (
+                    <motion.div 
+                      key="comments-section"
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden"
+                    >
+                       <div className="mt-6 pt-6 border-t border-gray-50 bg-gray-50/50 rounded-2xl p-6">
+                           <div className="space-y-4 mb-6">
+                            {loadingComments === post.postNo ? (
+                                <div className="text-center py-4 text-xs text-gray-400">Učitavanje...</div>
+                            ) : postComments[post.postNo] && postComments[post.postNo].length > 0 ? (
+                                postComments[post.postNo].map(comment => (
+                                    <div key={comment.id} className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                                        <div className="flex items-center gap-3 mb-2">
+                                            <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-[10px] font-black">{comment.avatar}</div>
+                                            <span className="text-xs font-black text-gray-900">{comment.authorName}</span>
+                                            <span className="text-[10px] text-gray-400">{comment.time}</span>
+                                        </div>
+                                        <p className="text-xs text-gray-600 pl-9">{comment.content}</p>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="text-center py-4 text-xs text-gray-400">Nema komentara. Budite prvi!</div>
+                            )}
+                           </div>
+                           
+                           {/* Add Comment Input */}
+                           <div className="relative">
+                               <input
+                                value={commentText}
+                                onChange={e => setCommentText(e.target.value)}
+                                placeholder="Dodajte komentar..."
+                                onKeyDown={e => {
+                                    if(e.key === 'Enter' && !e.shiftKey) {
+                                        e.preventDefault();
+                                        submitComment(post.id, post.postNo);
+                                    }
+                                }}
+                                className="w-full pl-6 pr-14 py-4 bg-white border border-gray-200 focus:border-blue-300 focus:ring-4 focus:ring-blue-50 rounded-2xl outline-none text-sm font-medium shadow-sm transition-all"
+                               />
+                               <button 
+                                onClick={() => submitComment(post.id, post.postNo)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center bg-gray-900 text-white rounded-xl hover:scale-110 active:scale-95 transition-all shadow-lg"
+                                style={{ backgroundColor: city.theme.primary }}
+                               >
+                                <span className="material-icons-round text-sm">send</span>
+                               </button>
+                           </div>
+                       </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </motion.div>
             ))
           )}

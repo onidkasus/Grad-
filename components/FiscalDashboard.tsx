@@ -1,8 +1,8 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Transaction, CityConfig } from '../types';
-import { MOCK_TRANSACTIONS } from '../constants';
+import { transactionsAPI } from '../services/api';
 
 interface FiscalDashboardProps {
   city: CityConfig;
@@ -10,9 +10,22 @@ interface FiscalDashboardProps {
 }
 
 const FiscalDashboard: React.FC<FiscalDashboardProps> = ({ city, showToast }) => {
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchTransactions = async () => {
+      setLoading(true);
+      const data = await transactionsAPI.getAll(city.id);
+      setTransactions(data);
+      setLoading(false);
+    };
+    fetchTransactions();
+  }, [city.id]);
+
   const chartData = useMemo(() => {
     let cumulative = 0;
-    return [...MOCK_TRANSACTIONS].reverse().map(tx => {
+    return [...transactions].reverse().map(tx => {
       cumulative += tx.type === 'CRDT' ? tx.amount : -tx.amount;
       return {
         name: tx.date.split('-').slice(2).join('.'),
@@ -23,11 +36,12 @@ const FiscalDashboard: React.FC<FiscalDashboardProps> = ({ city, showToast }) =>
         desc: tx.description
       };
     });
-  }, [city.id]);
+  }, [transactions]);
 
-  const totalIncome = useMemo(() => MOCK_TRANSACTIONS.filter(t => t.type === 'CRDT').reduce((a, b) => a + b.amount, 0), []);
-  const totalExpense = useMemo(() => MOCK_TRANSACTIONS.filter(t => t.type === 'DBIT').reduce((a, b) => a + b.amount, 0), []);
+  const totalIncome = useMemo(() => transactions.filter(t => t.type === 'CRDT').reduce((a, b) => a + b.amount, 0), [transactions]);
+  const totalExpense = useMemo(() => transactions.filter(t => t.type === 'DBIT').reduce((a, b) => a + b.amount, 0), [transactions]);
   const balance = totalIncome - totalExpense;
+  const executionPercentage = totalIncome > 0 ? ((balance/totalIncome)*100).toFixed(1) : 0;
 
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
@@ -45,6 +59,10 @@ const FiscalDashboard: React.FC<FiscalDashboardProps> = ({ city, showToast }) =>
     }
     return null;
   };
+
+  if (loading) {
+     return <div className="p-10 text-center flex h-96 items-center justify-center text-gray-400 font-bold">Učitavanje financijskih podataka...</div>;
+  }
 
   return (
     <div className="space-y-12 pb-32">
@@ -131,10 +149,10 @@ const FiscalDashboard: React.FC<FiscalDashboardProps> = ({ city, showToast }) =>
                     <div>
                        <div className="flex justify-between text-[10px] font-black uppercase mb-3">
                           <span className="opacity-50">Slobodni Kapital</span>
-                          <span>{((balance/totalIncome)*100).toFixed(1)}%</span>
+                          <span>{executionPercentage}%</span>
                        </div>
                        <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-                          <motion.div initial={{ width: 0 }} animate={{ width: `${(balance/totalIncome)*100}%` }} transition={{ duration: 1.5, ease: "easeOut" }} className="h-full bg-blue-500 rounded-full" />
+                          <motion.div initial={{ width: 0 }} animate={{ width: `${Math.max(0, parseFloat(executionPercentage as string))}%` }} transition={{ duration: 1.5, ease: "easeOut" }} className="h-full bg-blue-500 rounded-full" />
                        </div>
                     </div>
                     <div>
@@ -162,7 +180,9 @@ const FiscalDashboard: React.FC<FiscalDashboardProps> = ({ city, showToast }) =>
       <div className="space-y-6 animate-in fade-in duration-1000">
          <h3 className="text-2xl font-black text-gray-900 tracking-tight ml-4">Povijest Transakcija</h3>
          <div className="grid grid-cols-1 gap-4">
-            {MOCK_TRANSACTIONS.map((tx, idx) => (
+            {transactions.length === 0 ? (
+                <div className="p-6 text-center text-gray-400 bg-gray-50 rounded-[2rem]">Nema zabilježenih transakcija za ovaj grad.</div>
+            ) : transactions.map((tx, idx) => (
               <motion.div 
                 key={tx.id}
                 initial={{ opacity: 0, y: 20 }}

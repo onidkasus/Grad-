@@ -75,19 +75,33 @@ export interface Idea {
   updated_at: string;
   challenge_id?: string;
   tags?: string[];
+  phase?: number;
 }
 
 export interface Post {
-  id: string;
-  userId: string;
-  cityId: string;
-  author: string;
-  authorAvatar: string;
+  id: string; // Document ID
+  postNo: number; // For linking comments? from screenshots
+  authorName: string; 
+  authorAvatar: string; 
+  authorOIB: string;
   content: string;
-  likes: number;
-  commentsCount: number;
+  time: string; // Relative time string or display string
   created_at: string;
+  likes: number;
+  comments: number;
   likedByCurrentUser?: boolean;
+  cityID: number;
+}
+
+export interface PostComment {
+  id: string;
+  postNo: number;
+  authorOIB: string;
+  authorName?: string; 
+  avatar?: string;
+  content: string;
+  created_at: string;
+  time?: string;
 }
 
 export interface Challenge {
@@ -190,4 +204,5 @@ export interface Mission {
   desc: string;
   duration_begin: string; // ISO string 
   duration_end: string; // ISO string
+  cityID?: number;
 }

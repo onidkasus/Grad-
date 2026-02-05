@@ -1,4 +1,3 @@
-
 import { Notification } from '../types';
 
 type MessageHandler = (data: any) => void;
@@ -44,30 +43,8 @@ class MockWebSocketService {
   private simulateIncomingMessage() {
     const events = [
       {
-        type: 'NEW_NOTIFICATION',
-        notification: {
-          id: Date.now().toString(),
-          title: 'Novi Komentar',
-          message: 'Marko je komentirao vašu objavu.',
-          time: 'Upravo sad',
-          read: false,
-          type: 'INFO'
-        } as Notification
-      },
-      {
          type: 'IDEA_UPDATED',
          data: { id: '101', stage: 'Prototipiranje' }
-      },
-      {
-        type: 'NEW_NOTIFICATION',
-        notification: {
-          id: Date.now().toString(),
-          title: 'Sustavna Obavijest',
-          message: 'Proračun za 2024. je ažuriran.',
-          time: 'Prije 1 min',
-          read: false,
-          type: 'SUCCESS'
-        } as Notification
       }
     ];
 

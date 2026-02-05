@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { Idea, IncubatorStage, CityConfig } from '../types';
+import { ideasAPI } from '../services/api';
 
 interface IdeaIncubatorProps {
   ideas: Idea[];
@@ -13,11 +14,19 @@ const IdeaIncubator: React.FC<IdeaIncubatorProps> = ({ ideas, setIdeas, isReadOn
   const stages = Object.values(IncubatorStage);
   const approvedIdeas = ideas.filter(i => i.status === 'APPROVED');
 
-  const moveIdea = (ideaId: string, newStage: IncubatorStage) => {
+  const moveIdea = async (ideaId: string, newStage: IncubatorStage) => {
     if (isReadOnly) return;
+    
+    // Optimistic update
     setIdeas(prev => prev.map(idea => 
       idea.id === ideaId ? { ...idea, stage: newStage } : idea
     ));
+
+    try {
+      await ideasAPI.updateStage(ideaId, newStage);
+    } catch (error) {
+      console.error("Failed to update idea stage:", error);
+    }
   };
 
   const handleDragStart = (e: React.DragEvent, id: string) => {

@@ -146,8 +146,8 @@ const App: React.FC = () => {
   };
 
   const handleCityChange = async (city: CityConfig) => {
-    // Restriction: User cannot switch cities if their cityID is not 0 (Global/Super Admin)
-    if (user && user.cityID !== 0) {
+    // Restriction: Only Admins or Global Users (cityID 0) can switch cities
+    if (user && user.role !== UserRole.ADMIN && user.cityID !== 0) {
       showToast("Nemate ovlasti za promjenu grada.", "info");
       return;
     }
@@ -248,7 +248,7 @@ const App: React.FC = () => {
               {activeTab === 'dashboard' && <Dashboard user={user} ideas={ideas} challenges={challenges} city={selectedCity} showToast={showToast} setActiveTab={setActiveTab} onOpenAI={() => setShowAIAssistant(true)} />}
               {activeTab === 'fiscal' && <FiscalDashboard city={selectedCity} showToast={showToast} />}
               {activeTab === 'inspection' && <CompanyInspection showToast={showToast} />}
-              {activeTab === 'missions' && <Missions user={user} />}
+              {activeTab === 'missions' && <Missions user={user} cityId={selectedCity.id} />}
               {activeTab === 'challenges' && <ChallengesList challenges={challenges} city={selectedCity} user={user} onSubmitIdea={handleChallengeIdeaSubmission} ideas={ideas} />}
               {activeTab === 'incubator' && <IdeaIncubator ideas={ideas} setIdeas={handleIdeasUpdate} isReadOnly={user.role === UserRole.CITIZEN} city={selectedCity} />}
               {activeTab === 'community' && <Community ideas={ideas} setIdeas={handleIdeasUpdate} city={selectedCity} polls={polls} onVote={() => showToast('Glas uspješan!', 'success')} user={user} showToast={showToast} />}

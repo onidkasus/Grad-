@@ -1,19 +1,26 @@
-import { User, Idea, Challenge, Poll, Notification, UserRole, IncubatorStage, Category, Post } from '../types';
+import { User, Idea, Challenge, Poll, Notification, UserRole, IncubatorStage, Category, Post, Badge } from '../types';
 import { BADGES } from '../constants';
 import { db } from './firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-
-const LATENCY = 1000;
-const delay = (ms: number = LATENCY) => new Promise(resolve => setTimeout(resolve, ms));
+import { 
+  collection, 
+  query, 
+  where, 
+  getDocs, 
+  addDoc, 
+  updateDoc, 
+  doc, 
+  increment, 
+  arrayUnion, 
+  arrayRemove,
+  Timestamp,
+  orderBy,
+  limit,
+  serverTimestamp
+} from 'firebase/firestore';
 
 const STORAGE_KEYS = {
   TOKEN: 'grad_plus_token',
-  USER: 'grad_plus_user_data',
-  IDEAS: 'grad_plus_ideas_db',
-  POSTS: 'grad_plus_posts_db',
-  CHALLENGES: 'grad_plus_challenges_db',
-  POLLS: 'grad_plus_polls_db',
-  NOTIFICATIONS: 'grad_plus_notifications_db'
+  USER: 'grad_plus_user_data'
 };
 
 // Helper: Map numeric DB city ID to app string ID
@@ -25,60 +32,56 @@ const getCityString = (id: number) => {
     case 5: return 'zadar';
     case 6: return 'velika_gorica';
     case 7: return 'slavonski_brod';
+    // Add more mappings as needed based on DB
     default: return 'zagreb';
   }
 };
 
-const INITIAL_CHALLENGES: Challenge[] = [
-  // ZAGREB
-  { id: 'c-zg-1', cityId: 'zagreb', title: "Zeleni prsten Sljemena", description: "Revitalizacija pješačkih staza uz pametnu rasvjetu i senzore za vlagu tla.", category: Category.ENVIRONMENT, progress: 30, deadline: "01.12.2024.", ideasCount: 5, priority: "Visoko", fund: "40.000 €", featured: true, created_at: new Date().toISOString() },
-  { id: 'c-zg-2', cityId: 'zagreb', title: "Smart Parking Donji Grad", description: "Sustav za detekciju slobodnih mjesta u realnom vremenu preko mobilne aplikacije.", category: Category.TRANSPORT, progress: 65, deadline: "15.10.2024.", ideasCount: 12, priority: "Kritično", fund: "85.000 €", featured: false, created_at: new Date().toISOString() },
-  { id: 'c-zg-3', cityId: 'zagreb', title: "Digitalni Vrtići", description: "Platforma za centralizirano upravljanje upisima i komunikaciju s roditeljima.", category: Category.EDUCATION, progress: 10, deadline: "01.09.2025.", ideasCount: 3, priority: "Srednje", fund: "25.000 €", featured: true, created_at: new Date().toISOString() },
-  
-  // SPLIT
-  { id: 'c-st-1', cityId: 'split', title: "Održivi Žnjan", description: "Implementacija pametnih tuševa s reciklažom vode i solarnih suncobrana.", category: Category.ENVIRONMENT, progress: 15, deadline: "15.08.2024.", ideasCount: 2, priority: "Srednje", fund: "30.000 €", featured: true, created_at: new Date().toISOString() },
-  { id: 'c-st-2', cityId: 'split', title: "Smart Riva Hub", description: "Postavljanje high-speed internet i info stupova za turiste i građane.", category: Category.TECHNOLOGY, progress: 80, deadline: "01.06.2024.", ideasCount: 9, priority: "Visoko", fund: "20.000 €", featured: false, created_at: new Date().toISOString() },
-  
-  // ZADAR
-  { id: 'c-zd-1', cityId: 'zadar', title: "Eko-Luka Gaženica", description: "Sustav za praćenje kvalitete mora i zraka u realnom vremenu.", category: Category.ENVIRONMENT, progress: 85, deadline: "01.06.2024.", ideasCount: 12, priority: "Kritično", fund: "60.000 €", featured: true, created_at: new Date().toISOString() },
-  { id: 'c-zd-2', cityId: 'zadar', title: "AI Morske Orgulje", description: "Sustav za prediktivno održavanje instalacija pomoću AI analize zvuka.", category: Category.TECHNOLOGY, progress: 45, deadline: "20.12.2024.", ideasCount: 4, priority: "Srednje", fund: "15.000 €", featured: false, created_at: new Date().toISOString() },
+const getCityNumber = (cityString: string) => {
+    switch(cityString) {
+        case 'split': return 2;
+        case 'rijeka': return 3;
+        case 'osijek': return 4;
+        case 'zadar': return 5;
+        case 'velika_gorica': return 6;
+        case 'slavonski_brod': return 7;
+        case 'zagreb': default: return 1; 
+    }
+}
 
-  // RIJEKA
-  { id: 'c-ri-1', cityId: 'rijeka', title: "Industrijska Baština AR", description: "Proširena stvarnost za turističke ture kroz staru industrijsku zonu.", category: Category.TOURISM, progress: 55, deadline: "30.11.2024.", ideasCount: 8, priority: "Nisko", fund: "12.000 €", featured: true, created_at: new Date().toISOString() },
-  { id: 'c-ri-2', cityId: 'rijeka', title: "Startup Hub Torpedo", description: "Modernizacija prostora za IT inkubaciju i co-working.", category: Category.TECHNOLOGY, progress: 20, deadline: "01.03.2025.", ideasCount: 6, priority: "Visoko", fund: "120.000 €", featured: false, created_at: new Date().toISOString() },
+export const getInitials = (name: string) => {
+  return name
+    .split(' ')
+    .filter(n => n.length > 0)
+    .map(n => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+};
 
-  // OSIJEK
-  { id: 'c-os-1', cityId: 'osijek', title: "Tramvaj 2.0", description: "AI optimizacija linija i uvođenje beskontaktnog plaćanja u cijeloj mreži.", category: Category.TRANSPORT, progress: 50, deadline: "20.10.2024.", ideasCount: 7, priority: "Visoko", fund: "100.000 €", featured: true, created_at: new Date().toISOString() },
-  { id: 'c-os-2', cityId: 'osijek', title: "Smart Drava Promenade", description: "Pametna rasvjeta koja štedi energiju detekcijom kretanja prolaznika.", category: Category.ENVIRONMENT, progress: 95, deadline: "01.05.2024.", ideasCount: 15, priority: "Srednje", fund: "35.000 €", featured: false, created_at: new Date().toISOString() },
-];
+// Helper mapping for numeric phases
+const getStageFromPhase = (phase: number): IncubatorStage => {
+  switch(phase) {
+    case 1: return IncubatorStage.DISCOVERY;
+    case 2: return IncubatorStage.VALIDATION;
+    case 3: return IncubatorStage.PROTOTYPING;
+    case 4: return IncubatorStage.TESTING;
+    case 5: return IncubatorStage.SCALING;
+    // For 0 or unknown, default to Discovery but UI should handle "Not Accepted"
+    default: return IncubatorStage.DISCOVERY;
+  }
+};
 
-const INITIAL_IDEAS: Idea[] = [
-  // ZAGREB
-  { id: 'i-zg-1', cityId: 'zagreb', title: "Solarne nadstrešnice", description: "Postavljanje solara na krovove tramvajskih stanica za napajanje LED ekrana.", category: Category.ENERGY, impactScore: 85, author: "Ivan Horvat", authorAvatar: "IH", date: "10.03.2024.", stage: IncubatorStage.PROTOTYPING, likes: 120, comments: [], isVerified: true, status: 'APPROVED', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-  { id: 'i-zg-2', cityId: 'zagreb', title: "Aplikacija 'ZG Otpad'", description: "Gamifikacija recikliranja s nagradama za građane.", category: Category.ENVIRONMENT, impactScore: 45, author: "Maja P.", authorAvatar: "MP", date: "12.03.2024.", stage: IncubatorStage.VALIDATION, likes: 56, comments: [], isVerified: false, status: 'PENDING', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-
-  // SPLIT
-  { id: 'i-st-1', cityId: 'split', title: "E-Bicikli Poljud", description: "Sustav javnih e-bicikala povezan s kartom za stadion.", category: Category.TRANSPORT, impactScore: 78, author: "Luka Marulić", authorAvatar: "LM", date: "14.03.2024.", stage: IncubatorStage.SCALING, likes: 210, comments: [], isVerified: true, status: 'APPROVED', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-
-  // ZADAR
-  { id: 'i-zd-1', cityId: 'zadar', title: "Pametni parking Poluotok", description: "Senzori za slobodna mjesta povezani s mobilnom aplikacijom.", category: Category.TRANSPORT, impactScore: 92, author: "Niko Morski", authorAvatar: "NM", date: "15.03.2024.", stage: IncubatorStage.TESTING, likes: 340, comments: [], isVerified: true, status: 'APPROVED', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-  
-  // OSIJEK
-  { id: 'i-os-1', cityId: 'osijek', title: "Agro-Senzori za OPG", description: "Mreža senzora za praćenje vlage i hranjivih tvari u tlu za lokalne poljoprivrednike.", category: Category.ENVIRONMENT, impactScore: 90, author: "Pero Perić", authorAvatar: "PP", date: "18.03.2024.", stage: IncubatorStage.DISCOVERY, likes: 89, comments: [], isVerified: true, status: 'APPROVED', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-];
-
-const INITIAL_POSTS: Post[] = [
-  { id: 'post-1', userId: 'u1', cityId: 'zagreb', author: 'Ivan Horvat', authorAvatar: 'IH', content: 'Što mislite o uvođenju pješačke zone u Masarykovoj trajno? Meni se čini kao super stvar za centar.', likes: 45, commentsCount: 12, created_at: new Date().toISOString(), likedByCurrentUser: false },
-  { id: 'post-2', userId: 'u2', cityId: 'split', author: 'Luka Marulić', authorAvatar: 'LM', content: 'Gužve na ulazu u grad su nesnošljive. Hitno nam treba AI sinkronizacija semafora!', likes: 120, commentsCount: 34, created_at: new Date().toISOString(), likedByCurrentUser: true },
-  { id: 'post-3', userId: 'u5', cityId: 'zadar', author: 'Niko Morski', authorAvatar: 'NM', content: 'Morske orgulje trebaju redovito čišćenje, zvuk više nije isti kao prije par godina.', likes: 88, commentsCount: 15, created_at: new Date().toISOString(), likedByCurrentUser: false },
-  { id: 'post-4', userId: 'u3', cityId: 'rijeka', author: 'Morena F.', authorAvatar: 'MF', content: 'Novi startup hub je pun pogodak. Rijeka napokon postaje IT centar regije!', likes: 200, commentsCount: 45, created_at: new Date().toISOString(), likedByCurrentUser: false },
-];
-
-const INITIAL_POLLS: Poll[] = [
-  { id: 'p-zg-1', cityId: 'zagreb', question: 'Širenje pješačke zone u Masarykovoj?', options: [{id:'o1', text:'Da', votes: 4500}, {id:'o2', text:'Ne', votes: 1200}], totalVotes: 5700, endsIn: '5 dana' },
-  { id: 'p-st-1', cityId: 'split', question: 'Novi stadion na Poljudu ili sanacija?', options: [{id:'o1', text:'Novi stadion', votes: 8900}, {id:'o2', text:'Sanacija', votes: 12000}], totalVotes: 20900, endsIn: '10 dana' },
-  { id: 'p-os-1', cityId: 'osijek', question: 'Više biciklističkih staza uz Dravu?', options: [{id:'o1', text:'Naravno', votes: 3400}, {id:'o2', text:'Dosta ih je', votes: 150}], totalVotes: 3550, endsIn: '2 dana' },
-];
+const getPhaseFromStage = (stage: IncubatorStage): number => {
+  switch(stage) {
+    case IncubatorStage.DISCOVERY: return 1;
+    case IncubatorStage.VALIDATION: return 2;
+    case IncubatorStage.PROTOTYPING: return 3;
+    case IncubatorStage.TESTING: return 4;
+    case IncubatorStage.SCALING: return 5;
+    default: return 0;
+  }
+};
 
 export const authAPI = {
   login: async (credential: string): Promise<{user: User, token: string}> => {
@@ -106,18 +109,18 @@ export const authAPI = {
         firstName: data.firstName || '',
         lastName: data.lastName || '',
         OIB: data.OIB || credential,
-        cityID: data.cityID || 0,
+        cityID: data.cityID || 1,
         isAdmin: data.isAdmin || false,
         
         name: data.name || `${data.firstName || ''} ${data.lastName || ''}`.trim() || 'Korisnik',
         email: data.email || `${credential.toLowerCase()}@grad.plus`,
-        role: data.isAdmin ? UserRole.ADMIN : UserRole.CITIZEN,
+        role: data.isAdmin ? UserRole.ADMIN : UserRole.CITIZEN, // Using enums from types
         impactScore: data.impactScore || 100,
         rank: data.rank || 'Novi Građanin',
         verifiedCount: data.verifiedCount || 0,
         ideasCount: data.ideasCount || 0,
-        avatar: data.avatar || 'NM',
-        cityId: getCityString(data.cityID),
+        avatar: data.avatar || getInitials(data.name || `${data.firstName || ''} ${data.lastName || ''}`.trim() || 'Korisnik'),
+        cityId: getCityString(data.cityID || 1),
         badges: data.badges || BADGES,
         joined_date: data.joined_date || new Date().toISOString()
       };
@@ -145,82 +148,360 @@ export const authAPI = {
 
 export const ideasAPI = {
   getAll: async (cityId?: string): Promise<Idea[]> => {
-    await delay(300);
-    const stored = localStorage.getItem(STORAGE_KEYS.IDEAS);
-    const ideas = stored ? JSON.parse(stored) : INITIAL_IDEAS;
-    return cityId ? ideas.filter((i: Idea) => i.cityId === cityId) : ideas;
+    try {
+      const ideasRef = collection(db, "ideas");
+      let q = query(ideasRef); // Start with base collection
+      
+      if (cityId) {
+        const cityNum = getCityNumber(cityId); 
+        // Using 'in' to support both number (new format) and string (legacy) cityIDs
+        q = query(ideasRef, where("cityID", "in", [cityNum, cityNum.toString()]));
+      } else {
+        q = query(ideasRef, orderBy("createdAt", "desc"));
+      }
+
+      const snapshot = await getDocs(q);
+      const ideas = snapshot.docs.map(doc => {
+        const data = doc.data();
+        let status: 'PENDING' | 'APPROVED' | 'REJECTED' = 'PENDING';
+        
+        // Phase logic: 0 = Pending/Not Accepted, 1-5 = Accepted/Approved
+        let phase = typeof data.phase === 'number' ? data.phase : 0;
+        
+        // Legacy compatibility: If phase is 0 (or missing) but item is accepted
+        if (phase === 0 && data.isAccepted) {
+             const s = data.stage;
+             if (s === IncubatorStage.VALIDATION) phase = 2;
+             else if (s === IncubatorStage.PROTOTYPING) phase = 3;
+             else if (s === IncubatorStage.TESTING) phase = 4;
+             else if (s === IncubatorStage.SCALING) phase = 5;
+             else phase = 1; // Default to Discovery if accepted
+        }
+        
+        if (phase > 0) {
+            status = 'APPROVED';
+        } else if (data.isProcessed) {
+             status = data.isAccepted ? 'APPROVED' : 'REJECTED';
+        }
+
+        return {
+          id: doc.id,
+          title: data.title || "Bez Naslova",
+          description: data.desc || data.description || "",
+          category: data.category || Category.URBAN,
+          impactScore: data.impactScore || 0,
+          author: data.authorName || "Građanin",
+          authorAvatar: data.authorAvatar || getInitials(data.authorName || "Građanin"),
+          date: data.createdAt?.toDate ? data.createdAt.toDate().toLocaleDateString('hr-HR') : "Danas",
+          stage: getStageFromPhase(phase),
+          phase: phase,
+          likes: data.votes || 0,
+          comments: [], 
+          isVerified: status === 'APPROVED',
+          cityId: getCityString(parseInt(data.cityID || "1")), 
+          status: status,
+          created_at: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString(),
+          updated_at: data.updatedAt?.toDate ? data.updatedAt.toDate().toISOString() : new Date().toISOString(),
+          challenge_id: data.challengeID
+        } as Idea;
+      });
+      
+      // Sort client side to bypass index requirements
+      return ideas.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+    } catch (e) {
+      console.error("Error fetching ideas:", e);
+      return [];
+    }
   },
+  
   create: async (idea: Partial<Idea>, user: User): Promise<Idea> => {
-    await delay(800);
-    const stored = localStorage.getItem(STORAGE_KEYS.IDEAS);
-    const ideas = stored ? JSON.parse(stored) : [...INITIAL_IDEAS];
-    const newIdea: Idea = {
-      id: `id_${Date.now()}`,
-      title: idea.title!,
-      description: idea.description!,
-      category: idea.category || Category.URBAN,
-      impactScore: 10,
-      author: user.name,
-      authorAvatar: user.avatar,
-      date: new Date().toLocaleDateString('hr-HR'),
-      stage: IncubatorStage.DISCOVERY,
-      likes: 0,
-      comments: [],
-      isVerified: false,
-      cityId: user.cityId,
-      status: 'PENDING',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      challenge_id: idea.challenge_id
-    };
-    ideas.unshift(newIdea);
-    localStorage.setItem(STORAGE_KEYS.IDEAS, JSON.stringify(ideas));
-    return newIdea;
+    try {
+      // Store cityID as number to match new format
+      const cityIdVal = getCityNumber(user.cityId);
+
+      const ideaData = {
+        title: idea.title,
+        desc: idea.description,
+        category: idea.category,
+        authorOIB: user.OIB,
+        authorName: user.name,
+        authorAvatar: user.avatar,
+        cityID: cityIdVal, 
+        stage: IncubatorStage.DISCOVERY,
+        votes: 0,
+        isAccepted: false,
+        isProcessed: false,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        challengeID: idea.challenge_id || null,
+        impactScore: 10
+      };
+      
+      const docRef = await addDoc(collection(db, "ideas"), ideaData);
+      return {
+        ...idea,
+        id: docRef.id,
+        author: user.name,
+        created_at: new Date().toISOString()
+      } as Idea;
+    } catch (e) {
+      console.error("Error creating idea:", e);
+      throw e;
+    }
+  },
+
+  updateStage: async (ideaId: string, stage: IncubatorStage) => {
+    try {
+        const phase = getPhaseFromStage(stage);
+        const docRef = doc(db, "ideas", ideaId);
+        await updateDoc(docRef, {
+            phase: phase,
+            stage: stage, // Sync legacy field
+            updatedAt: serverTimestamp()
+        });
+    } catch(e) {
+        console.error("Error updating stage", e);
+        throw e;
+    }
   }
 };
 
 export const challengesAPI = {
   getAll: async (cityId?: string): Promise<Challenge[]> => {
-    await delay(300);
-    const stored = localStorage.getItem(STORAGE_KEYS.CHALLENGES);
-    const challenges = stored ? JSON.parse(stored) : INITIAL_CHALLENGES;
-    return cityId ? challenges.filter((c: Challenge) => c.cityId === cityId) : challenges;
+    try {
+      const ref = collection(db, "challenges");
+      let q = query(ref, where("isActive", "==", true));
+      
+      if (cityId) {
+        const cityNum = getCityNumber(cityId);
+        q = query(ref, where("cityID", "==", cityNum), where("isActive", "==", true));
+      }
+
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          cityId: getCityString(data.cityID || 1),
+          title: data.title || "Izazov",
+          description: data.desc || "",
+          category: data.category || Category.URBAN,
+          progress: data.progress || 0,
+          deadline: data.deadline || "TBD",
+          ideasCount: data.ideasCount || 0,
+          priority: data.priority || 'Srednje',
+          fund: data.fund || "0 €",
+          featured: data.featured || false,
+          created_at: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString()
+        } as Challenge;
+      });
+    } catch (e) {
+      console.error("Error fetching challenges:", e);
+      return [];
+    }
   }
 };
 
 export const pollsAPI = {
   getAll: async (cityId?: string): Promise<Poll[]> => {
-    await delay(200);
-    const stored = localStorage.getItem(STORAGE_KEYS.POLLS);
-    const polls = stored ? JSON.parse(stored) : INITIAL_POLLS;
-    return cityId ? polls.filter((p: Poll) => p.cityId === cityId) : polls;
+    try {
+       const ref = collection(db, "polls");
+       let q = ref as any;
+       if (cityId) {
+          q = query(ref, where("cityID", "==", getCityNumber(cityId)));
+       }
+       const snapshot = await getDocs(q);
+       return snapshot.docs.map(doc => {
+         const data = doc.data();
+         return {
+           id: doc.id,
+           cityId: getCityString(data.cityID || 1),
+           question: data.question || "",
+           options: data.options || [],
+           totalVotes: data.totalVotes || 0,
+           endsIn: data.endsIn || "Uskoro"
+         } as Poll;
+       });
+    } catch (e) {
+      console.error("Error fetching polls:", e);
+      return [];
+    }
   }
 };
 
 export const communityAPI = {
   getPosts: async (cityId?: string): Promise<Post[]> => {
-    await delay(300);
-    const stored = localStorage.getItem(STORAGE_KEYS.POSTS);
-    const posts = stored ? JSON.parse(stored) : INITIAL_POSTS;
-    return cityId ? posts.filter((p: Post) => p.cityId === cityId) : posts;
+    try {
+      const ref = collection(db, "posts");
+      let q = query(ref, orderBy("createdAt", "desc"));
+      if(cityId) {
+         // Sort by createdAt descending locally to avoid index creation if possible, 
+         // but simple queries handle it fine. Use "cityID" as number according to screenshot.
+         const cityNum = getCityNumber(cityId);
+         q = query(ref, where("cityID", "==", cityNum)); // Removed orderBy("createdAt", "desc") to avoid composite index error for now
+      }
+      const snapshot = await getDocs(q);
+      const posts = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          postNo: data.postNo || 0,
+          authorOIB: data.authorOIB,
+          cityID: data.cityID || 1,
+          authorName: data.authorName || "Građanin", 
+          authorAvatar: data.authorAvatar || getInitials(data.authorName || "Građanin"),
+          content: data.content || "",
+          likes: data.likes || 0,
+          comments: data.commentsCount || 0, // Mapping commentsCount to comments property
+          created_at: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString(),
+          time: data.createdAt?.toDate ? data.createdAt.toDate().toLocaleString('hr-HR') : "Nedavno",
+          likedByCurrentUser: false 
+        } as Post;
+      });
+      // Client-side sort
+      return posts.sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    } catch (e) {
+      console.error("Error fetching posts:", e);
+      return [];
+    }
   },
   createPost: async (content: string, user: User): Promise<Post> => {
-    await delay(500);
-    const stored = localStorage.getItem(STORAGE_KEYS.POSTS);
-    const posts = stored ? JSON.parse(stored) : [...INITIAL_POSTS];
-    const newPost: Post = { id: `post_${Date.now()}`, userId: user.id, cityId: user.cityId, author: user.name, authorAvatar: user.avatar, content, likes: 0, commentsCount: 0, created_at: new Date().toISOString(), likedByCurrentUser: false };
-    posts.unshift(newPost);
-    localStorage.setItem(STORAGE_KEYS.POSTS, JSON.stringify(posts));
-    return newPost;
+     try {
+       // Need to generate a postNo. For now, using a simple counter is unsafe in distributed systems without transactions/shards
+       // But user screenshot shows 1. We will try to find max (client side or separate counter doc). 
+       // For speed/simplicity in this context, we will query the latest post to get its postNo + 1. 
+       // NOTE: Race conditions possible.
+       
+       const postsRef = collection(db, "posts");
+       const lastPostQuery = query(postsRef, orderBy("postNo", "desc"), limit(1));
+       const lastSnapshot = await getDocs(lastPostQuery);
+       let nextPostNo = 1;
+       if (!lastSnapshot.empty) {
+           nextPostNo = (lastSnapshot.docs[0].data().postNo || 0) + 1;
+       }
+
+       const postData = {
+         content,
+         authorOIB: user.OIB,
+         authorName: user.name, // Storing redundant data simplifies reads
+         authorAvatar: user.avatar,
+         cityID: getCityNumber(user.cityId),
+         postNo: nextPostNo,
+         likes: 0,
+         commentsCount: 0, // Using commentsCount in DB to track
+         createdAt: serverTimestamp()
+       };
+       const docRef = await addDoc(collection(db, "posts"), postData);
+       return {
+         id: docRef.id,
+         postNo: nextPostNo,
+         authorOIB: user.OIB,
+         cityID: getCityNumber(user.cityId),
+         authorName: user.name,
+         authorAvatar: user.avatar,
+         content,
+         likes: 0,
+         comments: 0,
+         created_at: new Date().toISOString(),
+         time: "Upravo sad",
+         likedByCurrentUser: false
+       };
+     } catch (e) {
+       console.error("Error creating post:", e);
+       throw e;
+     }
   },
   likePost: async (postId: string): Promise<void> => {
-    const stored = localStorage.getItem(STORAGE_KEYS.POSTS);
-    const posts = stored ? JSON.parse(stored) : [...INITIAL_POSTS];
-    const index = posts.findIndex((p: Post) => p.id === postId);
-    if (index !== -1) {
-      posts[index].likes += posts[index].likedByCurrentUser ? -1 : 1;
-      posts[index].likedByCurrentUser = !posts[index].likedByCurrentUser;
-      localStorage.setItem(STORAGE_KEYS.POSTS, JSON.stringify(posts));
+    try {
+      const postRef = doc(db, "posts", postId);
+      await updateDoc(postRef, {
+        likes: increment(1)
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  },
+  // Adding comment functionality
+  getComments: async (postNo: number): Promise<PostComment[]> => {
+      try {
+          const ref = collection(db, "post-comments");
+          const q = query(ref, where("postNo", "==", postNo));
+          const snapshot = await getDocs(q);
+          const comments = snapshot.docs.map(doc => {
+              const data = doc.data();
+              return {
+                  id: doc.id,
+                  postNo: data.postNo,
+                  authorOIB: data.authorOIB,
+                  authorName: data.authorName || "Građanin", 
+                  avatar: data.avatar || getInitials(data.authorName || "Građanin"),
+                  content: data.content,
+                  created_at: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString(),
+                  time: data.createdAt?.toDate ? data.createdAt.toDate().toLocaleString('hr-HR') : "Nedavno"
+              } as PostComment;
+          });
+          return comments.sort((a,b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      } catch (e) {
+          console.error("Error fetching comments:", e);
+          return [];
+      }
+  },
+  addComment: async (postNo: number, content: string, user: User, postId: string): Promise<PostComment> => {
+      try {
+          const commentData = {
+              postNo: postNo, // Link by Number as per schema screenshot
+              authorOIB: user.OIB,
+              authorName: user.name,
+              avatar: user.avatar,
+              content: content,
+              createdAt: serverTimestamp()
+          };
+          
+          const docRef = await addDoc(collection(db, "post-comments"), commentData);
+          
+          // Increment comment count on post
+          const postRef = doc(db, "posts", postId);
+          await updateDoc(postRef, {
+              commentsCount: increment(1)
+          });
+          
+          return {
+              id: docRef.id,
+              postNo,
+              authorOIB: user.OIB,
+              authorName: user.name,
+              avatar: user.avatar,
+              content,
+              created_at: new Date().toISOString(),
+              time: "Upravo sad"
+          };
+      } catch(e) {
+          console.error("Error adding comment:", e);
+          throw e;
+      }
+  }
+};
+
+export const transactionsAPI = {
+  getAll: async (cityId?: string): Promise<any[]> => {
+    try {
+      const ref = collection(db, "transactions");
+      const snapshot = await getDocs(ref); 
+      // Simplified query to avoid index errors initially, can refine later
+      return snapshot.docs.map(doc => {
+         const data = doc.data();
+         return {
+             id: doc.id,
+             date: data.date || new Date().toISOString().split('T')[0],
+             description: data.description || 'Transakcija',
+             amount: data.amount || 0,
+             type: data.type || 'DBIT' 
+         };
+      });
+    } catch (e) {
+      console.error(e);
+      return [];
     }
   }
 };
@@ -234,7 +515,7 @@ export const citiesAPI = {
         const data = doc.data();
         const numericId = parseInt(doc.id, 10);
         return {
-          id: getCityString(numericId), // Convert "7" -> "slavonski_brod"
+          id: getCityString(numericId),
           name: data.cityName || 'Nepoznat Grad'
         };
       });
