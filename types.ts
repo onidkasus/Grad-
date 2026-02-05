@@ -115,16 +115,23 @@ export interface Notification {
 }
 
 export interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: UserRole;
+  id: string; // The document ID
+  firstName: string;
+  lastName: string;
+  OIB: string;
+  cityID: number;
+  isAdmin: boolean;
+  
+  // UI compatibility fields (can be derived or optional)
+  name: string; // derived from firstName + lastName
+  email?: string;
+  role: UserRole; // derived from isAdmin
   impactScore: number;
   rank: string;
   verifiedCount: number;
   ideasCount: number;
   avatar: string;
-  cityId: string;
+  cityId: string; // mapped from cityID
   badges: Badge[];
   joined_date: string;
 }
@@ -175,4 +182,12 @@ export interface DigitalDocument {
   issuer: string;
   status: 'VERIFIED' | 'PENDING' | 'EXPIRED';
   fileType: 'PDF' | 'IMAGE';
+}
+
+export interface Mission {
+  id: string;
+  name: string;
+  desc: string;
+  duration_begin: string; // ISO string 
+  duration_end: string; // ISO string
 }

@@ -40,8 +40,8 @@ const Navbar: React.FC<NavbarProps> = ({
       <div className="flex items-center gap-12">
         <div className="relative">
           <button 
-            onClick={() => setShowCityPicker(!showCityPicker)}
-            className="flex items-center gap-4 group text-left outline-none"
+            onClick={() => user.cityID === 0 && setShowCityPicker(!showCityPicker)}
+            className={`flex items-center gap-4 group text-left outline-none ${user.cityID !== 0 ? 'cursor-default' : 'cursor-pointer'}`}
           >
              <motion.div 
                whileHover={{ rotate: 5, scale: 1.05 }}
@@ -52,7 +52,10 @@ const Navbar: React.FC<NavbarProps> = ({
              </motion.div>
              <div>
                 <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.4em] leading-none mb-1.5 flex items-center gap-1">
-                  RH • Regija {selectedCity.name} <span className="material-icons-round text-[10px] group-hover:translate-y-0.5 transition-transform text-blue-600">expand_more</span>
+                  RH • Regija {selectedCity.name} 
+                  {user.cityID === 0 && (
+                    <span className="material-icons-round text-[10px] group-hover:translate-y-0.5 transition-transform text-blue-600">expand_more</span>
+                  )}
                 </p>
                 <h2 className="text-lg font-black tracking-tighter leading-none">{selectedCity.name.toUpperCase()}</h2>
              </div>
@@ -71,7 +74,9 @@ const Navbar: React.FC<NavbarProps> = ({
                     currentTheme === 'light' ? 'bg-white border-gray-100' : 'bg-gray-900 border-white/10'
                   }`}
                 >
-                  <p className="px-4 py-2 text-[9px] font-black text-gray-400 uppercase tracking-[0.5em] mb-6">Administracija Regija (7)</p>
+                  {user.cityID === 0 && (
+                    <p className="px-4 py-2 text-[9px] font-black text-gray-400 uppercase tracking-[0.5em] mb-6">Administracija Regija (7)</p>
+                  )}
                   <div className="grid grid-cols-2 gap-3">
                     {CITIES.map(city => (
                       <button 

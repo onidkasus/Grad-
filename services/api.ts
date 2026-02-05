@@ -1,5 +1,7 @@
 import { User, Idea, Challenge, Poll, Notification, UserRole, IncubatorStage, Category, Post } from '../types';
 import { BADGES } from '../constants';
+import { db } from './firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 
 const LATENCY = 1000;
 const delay = (ms: number = LATENCY) => new Promise(resolve => setTimeout(resolve, ms));
@@ -13,8 +15,6 @@ const STORAGE_KEYS = {
   POLLS: 'grad_plus_polls_db',
   NOTIFICATIONS: 'grad_plus_notifications_db'
 };
-
-// --- MASIVNA BAZA PODATAKA ---
 
 const INITIAL_CHALLENGES: Challenge[] = [
   // ZAGREB
@@ -67,28 +67,69 @@ const INITIAL_POLLS: Poll[] = [
   { id: 'p-os-1', cityId: 'osijek', question: 'Više biciklističkih staza uz Dravu?', options: [{id:'o1', text:'Naravno', votes: 3400}, {id:'o2', text:'Dosta ih je', votes: 150}], totalVotes: 3550, endsIn: '2 dana' },
 ];
 
-const NIAS_DATABASE: Record<string, User> = {
-  'OIB-ZAGREB': { id: 'u1', name: 'Ivan Horvat', email: 'ivan.h@zagreb.hr', role: UserRole.CITIZEN, impactScore: 2100, rank: 'Dijamantni Građanin', verifiedCount: 42, ideasCount: 12, avatar: 'IH', cityId: 'zagreb', badges: BADGES, joined_date: '2024-01-01' },
-  'OIB-SPLIT': { id: 'u2', name: 'Luka Marulić', email: 'luka.m@split.hr', role: UserRole.CITIZEN, impactScore: 1850, rank: 'Zlatni Inovator', verifiedCount: 30, ideasCount: 8, avatar: 'LM', cityId: 'split', badges: BADGES, joined_date: '2024-02-15' },
-  'OIB-RIJEKA': { id: 'u3', name: 'Morena Fiuman', email: 'morena.f@rijeka.hr', role: UserRole.CITIZEN, impactScore: 1600, rank: 'Srebrni Član', verifiedCount: 22, ideasCount: 5, avatar: 'MF', cityId: 'rijeka', badges: BADGES, joined_date: '2024-03-10' },
-  'OIB-ZADAR': { id: 'u5', name: 'Niko Morski', email: 'niko.m@zadar.hr', role: UserRole.CITIZEN, impactScore: 2400, rank: 'Vitez Zadra', verifiedCount: 50, ideasCount: 15, avatar: 'NM', cityId: 'zadar', badges: BADGES, joined_date: '2024-05-20' },
-  'OIB-ADMIN': { id: 'adm-01', name: 'Stjepan S.', email: 'superadmin@grad.plus', role: UserRole.ADMIN, impactScore: 9999, rank: 'Sustav Nadzornik', verifiedCount: 1000, ideasCount: 0, avatar: 'SS', cityId: 'zagreb', badges: BADGES, joined_date: '2023-01-01' }
-};
-
 export const authAPI = {
   login: async (credential: string): Promise<{user: User, token: string}> => {
-    await delay(1500); 
-    const upperOib = credential.toUpperCase();
-    const user = NIAS_DATABASE[upperOib];
-    
-    if (!user) {
-      throw new Error('Pogrešan OIB. Sustav e-Građanin ne prepoznaje unesene vjerodajnice.');
+    try {
+      const usersRef = collection(db, "users");
+      // Try searching by OIB
+      let q = query(usersRef, where("OIB", "==", credential));
+      let querySnapshot = await getDocs(q);
+
+      // Fallback: try searching by username (legacy/alt field)
+      if (querySnapshot.empty) {
+        q = query(usersRef, where("username", "==", credential));
+        querySnapshot = await getDocs(q);
+      }
+
+      if (querySnapshot.empty) {
+        throw new Error('Pogrešan OIB. Sustav e-Građanin ne prepoznaje unesene vjerodajnice.');
+      }
+
+      const docSnap = querySnapshot.docs[0];
+      const data = docSnap.data();
+      
+      // Map cityID to string cityId
+      const getCityString = (id: number) => {
+        switch(id) {
+          case 2: return 'split';
+          case 3: return 'rijeka';
+          case 4: return 'osijek'; 
+          case 5: return 'zadar';
+          case 6: return 'velika_gorica';
+          case 7: return 'slavonski_brod';
+          default: return 'zagreb';
+        }
+      };
+
+      const user: User = {
+        id: docSnap.id,
+        firstName: data.firstName || '',
+        lastName: data.lastName || '',
+        OIB: data.OIB || credential,
+        cityID: data.cityID || 0,
+        isAdmin: data.isAdmin || false,
+        
+        name: data.name || `${data.firstName || ''} ${data.lastName || ''}`.trim() || 'Korisnik',
+        email: data.email || `${credential.toLowerCase()}@grad.plus`,
+        role: data.isAdmin ? UserRole.ADMIN : UserRole.CITIZEN,
+        impactScore: data.impactScore || 100,
+        rank: data.rank || 'Novi Građanin',
+        verifiedCount: data.verifiedCount || 0,
+        ideasCount: data.ideasCount || 0,
+        avatar: data.avatar || 'NM',
+        cityId: getCityString(data.cityID),
+        badges: data.badges || BADGES,
+        joined_date: data.joined_date || new Date().toISOString()
+      };
+      
+      const mockToken = `jwt_${Date.now()}`;
+      localStorage.setItem(STORAGE_KEYS.TOKEN, mockToken);
+      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
+      return { user, token: mockToken };
+    } catch (e: any) {
+      console.error("Login Error:", e);
+      throw new Error(e.message || 'Greška pri prijavi.');
     }
-    
-    const mockToken = `jwt_${Date.now()}`;
-    localStorage.setItem(STORAGE_KEYS.TOKEN, mockToken);
-    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
-    return { user, token: mockToken };
   },
 
   logout: async () => {

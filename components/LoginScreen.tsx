@@ -38,12 +38,6 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
     
     try {
       await authAPI.login(credential);
-      // Generate a mock UID or use a real one if available from authAPI in the future.
-      // For now, using a simple hash or random string as placeholder if authAPI doesn't return one.
-      // Ideally authAPI.login() should return the user object.
-      // Assuming a random ID for demonstration if API doesn't provide one.
-      const mockUid = "user_" + Math.random().toString(36).substr(2, 9);
-      await storeLogin(mockUid, credential); // Store OIB/credential as username for now as per image reference "OIB-ADMIN"
       onLogin();
     } catch (e: any) {
       setError(e.message || 'Greška pri prijavi.');
