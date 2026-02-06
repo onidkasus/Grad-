@@ -77,6 +77,7 @@ export interface Idea {
   tags?: string[];
   phase?: number;
   aiRating?: number;
+  aiReasoning?: string;
 }
 
 export interface Post {

@@ -31,8 +31,12 @@ const Community: React.FC<CommunityProps> = ({ ideas, setIdeas, city, polls, onV
   
   const [isPosting, setIsPosting] = useState(false);
   const [filter, setFilter] = useState('Sve');
-  const [activeCommentId, setActiveCommentId] = useState<string | null>(null); // storing id of post being commented on
+  const [activeCommentId, setActiveCommentId] = useState<string | null>(null); // storing id of post/idea being commented on
   const [commentText, setCommentText] = useState('');
+  
+  // Track which ideas and posts the user has liked
+  const [likedIdeas, setLikedIdeas] = useState<Set<string>>(new Set());
+  const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (viewMode === 'POSTS') {
@@ -95,14 +99,46 @@ const Community: React.FC<CommunityProps> = ({ ideas, setIdeas, city, polls, onV
   };
 
   const handleLikeIdea = (id: string) => {
-    setIdeas(prev => prev.map(idea => 
-      idea.id === id ? { ...idea, likes: idea.likes + 1 } : idea
-    ));
+    // Check if user has already liked this idea
+    if (likedIdeas.has(id)) {
+      // Unlike
+      setIdeas(prev => prev.map(idea => 
+        idea.id === id ? { ...idea, likes: Math.max(0, idea.likes - 1) } : idea
+      ));
+      setLikedIdeas(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(id);
+        return newSet;
+      });
+      showToast('Lajk uklonjen', 'info');
+    } else {
+      // Like
+      setIdeas(prev => prev.map(idea => 
+        idea.id === id ? { ...idea, likes: idea.likes + 1 } : idea
+      ));
+      setLikedIdeas(prev => new Set([...prev, id]));
+      showToast('Lajkano!', 'success');
+    }
   };
 
   const handleLikePost = async (id: string) => {
-    await communityAPI.likePost(id);
-    setPosts(prev => prev.map(p => p.id === id ? { ...p, likes: p.likes + 1, likedByCurrentUser: true } : p));
+    if (likedPosts.has(id)) {
+      // Unlike
+      await communityAPI.likePost(id);
+      setPosts(prev => prev.map(p => p.id === id ? { ...p, likes: Math.max(0, p.likes - 1), likedByCurrentUser: false } : p));
+      setLikedPosts(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(id);
+        return newSet;
+      });
+      showToast('Lajk uklonjen', 'info');
+    } else {
+      // Like
+      await communityAPI.likePost(id);
+      setPosts(prev => prev.map(p => p.id === id ? { ...p, likes: p.likes + 1, likedByCurrentUser: true } : p));
+      setLikedPosts(prev => new Set([...prev, id]));
+      showToast('Lajkano!', 'success');
+    }
   };
 
   const submitComment = async (postId: string, postNo: number) => {
@@ -150,7 +186,16 @@ const Community: React.FC<CommunityProps> = ({ ideas, setIdeas, city, polls, onV
       return idea;
     }));
     setCommentText('');
-    showToast('Komentar dodan');
+    setActiveCommentId(null);
+    showToast('Komentar dodan', 'success');
+  };
+
+  const toggleIdeaComments = (ideaId: string) => {
+    if (activeCommentId === ideaId) {
+      setActiveCommentId(null);
+    } else {
+      setActiveCommentId(ideaId);
+    }
   };
 
   const categories = Object.values(Category);
@@ -227,12 +272,12 @@ const Community: React.FC<CommunityProps> = ({ ideas, setIdeas, city, polls, onV
                         value={newIdeaTitle}
                         onChange={e => setNewIdeaTitle(e.target.value)}
                         placeholder="Naslov vaše vizije..."
-                        className="w-full px-6 py-4 bg-gray-50 border border-transparent focus:bg-white focus:border-blue-100 rounded-2xl outline-none font-black text-lg transition-all"
+                        className="w-full px-6 py-4 bg-gray-50 border border-transparent focus:bg-white focus:border-blue-100 rounded-2xl outline-none font-black text-lg transition-all text-gray-900"
                       />
                       <select 
                         value={selectedCategory}
                         onChange={(e) => setSelectedCategory(e.target.value as Category)}
-                        className="px-6 py-4 bg-gray-50 border border-transparent focus:bg-white focus:border-blue-100 rounded-2xl outline-none font-black text-xs uppercase tracking-widest text-gray-500 appearance-none cursor-pointer transition-all"
+                        className="px-6 py-4 bg-gray-50 border border-transparent focus:bg-white focus:border-blue-100 rounded-2xl outline-none font-black text-xs uppercase tracking-widest text-gray-900 appearance-none cursor-pointer transition-all"
                       >
                         {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                       </select>
@@ -241,15 +286,15 @@ const Community: React.FC<CommunityProps> = ({ ideas, setIdeas, city, polls, onV
                       value={newIdeaDesc}
                       onChange={e => setNewIdeaDesc(e.target.value)}
                       placeholder="Opišite detalje ideje... Kako ovo poboljšava život u gradu?"
-                      className="w-full px-6 py-5 bg-gray-50 border border-transparent focus:bg-white focus:border-blue-100 rounded-[2rem] outline-none font-medium min-h-[140px] resize-none transition-all"
+                      className="w-full px-6 py-5 bg-gray-50 border border-transparent focus:bg-white focus:border-blue-100 rounded-[2rem] outline-none font-medium min-h-[140px] resize-none transition-all text-gray-900"
                     />
                   </>
                 ) : (
                   <textarea 
                     value={newPostContent}
                     onChange={e => setNewPostContent(e.target.value)}
-                    placeholder="Što vam je na umu? Podijelite s sugrađanima..."
-                    className="w-full px-6 py-5 bg-gray-50 border border-transparent focus:bg-white focus:border-blue-100 rounded-[2rem] outline-none font-medium min-h-[140px] resize-none transition-all"
+                    placeholder="Što vam je na umi? Podijelite s sugrađanima..."
+                    className="w-full px-6 py-5 bg-gray-50 border border-transparent focus:bg-white focus:border-blue-100 rounded-[2rem] outline-none font-medium min-h-[140px] resize-none transition-all text-gray-900"
                   />
                 )}
 
@@ -354,15 +399,92 @@ const Community: React.FC<CommunityProps> = ({ ideas, setIdeas, city, polls, onV
                   <div className="flex items-center gap-6">
                     <button 
                       onClick={() => handleLikeIdea(idea.id)}
-                      className="flex items-center gap-2 text-gray-400 hover:text-red-500 transition-all group/btn"
+                      className={`flex items-center gap-2 transition-all group/btn ${
+                        likedIdeas.has(idea.id) ? 'text-red-500' : 'text-gray-400 hover:text-red-500'
+                      }`}
                     >
-                      <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center group-hover/btn:bg-red-50 group-hover/btn:text-red-500 transition-all active:scale-125">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all active:scale-125 ${
+                        likedIdeas.has(idea.id) ? 'bg-red-50 text-red-500' : 'bg-gray-50 group-hover/btn:bg-red-50 group-hover/btn:text-red-500'
+                      }`}>
                          <span className="material-icons-round text-xl">favorite</span>
                       </div>
                       <span className="text-xs font-black text-gray-900">{idea.likes}</span>
                     </button>
+                    
+                    <button 
+                      onClick={() => toggleIdeaComments(idea.id)}
+                      className={`flex items-center gap-2 transition-all group/btn ${
+                        activeCommentId === idea.id ? 'text-blue-600' : 'text-gray-400 hover:text-blue-600'
+                      }`}
+                    >
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
+                        activeCommentId === idea.id ? 'bg-blue-50 text-blue-600' : 'bg-gray-50 group-hover/btn:bg-blue-50 group-hover/btn:text-blue-600'
+                      }`}>
+                         <span className="material-icons-round text-xl">comment</span>
+                      </div>
+                      <span className="text-xs font-black text-gray-900">{idea.comments.length}</span>
+                    </button>
                   </div>
                 </div>
+
+                {/* IDEA COMMENTS SECTION */}
+                <AnimatePresence>
+                  {activeCommentId === idea.id && (
+                    <motion.div 
+                      key="idea-comments"
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="mt-6 pt-6 border-t border-gray-50 bg-gray-50/50 rounded-2xl p-6">
+                        <div className="space-y-4 mb-6">
+                          {idea.comments.length > 0 ? (
+                            idea.comments.map(comment => (
+                              <div key={comment.id} className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                                <div className="flex items-center gap-3 mb-2">
+                                  <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-xs font-black">
+                                    {comment.avatar}
+                                  </div>
+                                  <span className="text-sm font-black text-gray-900">{comment.author}</span>
+                                  <span className="text-xs text-gray-400">{comment.time}</span>
+                                </div>
+                                <p className="text-sm text-gray-600 pl-11 leading-relaxed">{comment.text}</p>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="text-center py-4 text-xs text-gray-400">Nema komentara. Budite prvi!</div>
+                          )}
+                        </div>
+
+                        {/* Comment Input */}
+                        <div className="flex gap-3">
+                          <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm text-white shadow-md" 
+                               style={{ backgroundColor: city.theme.primary }}>
+                            {user.avatar}
+                          </div>
+                          <div className="flex-1 flex gap-2">
+                            <input
+                              type="text"
+                              value={activeCommentId === idea.id ? commentText : ''}
+                              onChange={(e) => setCommentText(e.target.value)}
+                              onKeyDown={(e) => e.key === 'Enter' && handleCommentIdea(idea.id)}
+                              placeholder="Dodaj komentar..."
+                              className="flex-1 px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-all text-sm text-gray-900"
+                            />
+                            <button
+                              onClick={() => handleCommentIdea(idea.id)}
+                              disabled={!commentText.trim()}
+                              className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all shadow-md hover:shadow-lg"
+                            >
+                              Pošalji
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </motion.div>
             ))
           ) : (
@@ -463,7 +585,7 @@ const Community: React.FC<CommunityProps> = ({ ideas, setIdeas, city, polls, onV
                                         submitComment(post.id, post.postNo);
                                     }
                                 }}
-                                className="w-full pl-6 pr-14 py-4 bg-white border border-gray-200 focus:border-blue-300 focus:ring-4 focus:ring-blue-50 rounded-2xl outline-none text-sm font-medium shadow-sm transition-all"
+                                className="w-full pl-6 pr-14 py-4 bg-white border border-gray-200 focus:border-blue-300 focus:ring-4 focus:ring-blue-50 rounded-2xl outline-none text-sm font-medium shadow-sm transition-all text-gray-900"
                                />
                                <button 
                                 onClick={() => submitComment(post.id, post.postNo)}

@@ -17,6 +17,25 @@ function formatDate(dateStr: string | Date | undefined): string {
   return `${day}/${month}/${year}`;
 }
 
+// Helper to get category icon
+function getCategoryIcon(category: string): string {
+  const categoryMap: Record<string, string> = {
+    'Socijalno': 'volunteer_activism',
+    'Obrazovanje': 'school',
+    'Infrastruktura': 'construction',
+    'Infrastrukutra': 'construction', // typo version
+    'Zdravstvo': 'medical_services',
+    'Kultura': 'palette',
+    'Sport': 'sports_soccer',
+    'Okoliš': 'park',
+    'Tehnologija': 'computer',
+    'Mobilnost': 'directions_car',
+    'Sigurnost': 'shield',
+    'Ekonomija': 'account_balance'
+  };
+  return categoryMap[category] || 'category';
+}
+
 interface ChallengesListProps {
   challenges: Challenge[];
   city: CityConfig;
@@ -40,6 +59,35 @@ const ChallengesList: React.FC<ChallengesListProps> = ({ challenges, city, user,
       return acc;
     }, new Set<string>());
   }, [ideas, user.name]);
+
+  // Kalkulacija napretka izazova na osnovu prijavljenih ideja
+  const calculateChallengeProgress = (challengeId: string): number => {
+    const challengeIdeas = ideas.filter(idea => idea.challenge_id === challengeId);
+    
+    if (challengeIdeas.length === 0) return 0;
+    
+    // Bodovanje ovisno o statusu ideje
+    let totalPoints = 0;
+    challengeIdeas.forEach(idea => {
+      switch (idea.stage) {
+        case 'Odobreno':
+        case 'Implementacija':
+          totalPoints += 25; // Approved ideas contribute more
+          break;
+        case 'U review':
+          totalPoints += 15; // Ideas under review
+          break;
+        case 'Novo':
+          totalPoints += 10; // New ideas
+          break;
+        default:
+          totalPoints += 5;
+      }
+    });
+    
+    // Cap at 100%
+    return Math.min(Math.round(totalPoints), 100);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,6 +122,7 @@ const ChallengesList: React.FC<ChallengesListProps> = ({ challenges, city, user,
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {challenges.map((challenge) => {
           const hasApplied = userApplications.has(challenge.id);
+          const calculatedProgress = calculateChallengeProgress(challenge.id);
           
           return (
             <div key={challenge.id} className="group bg-white rounded-[2.5rem] border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all flex flex-col h-full overflow-hidden">
@@ -83,7 +132,7 @@ const ChallengesList: React.FC<ChallengesListProps> = ({ challenges, city, user,
                     challenge.priority === 'Kritično' ? 'bg-red-500 shadow-red-100' : 
                     challenge.priority === 'Visoko' ? 'bg-amber-500 shadow-amber-100' : ''
                   }`} style={challenge.priority !== 'Kritično' && challenge.priority !== 'Visoko' ? { backgroundColor: city.theme.primary } : {}}>
-                    <span className="material-icons-round">{hasApplied ? 'check_circle' : 'stars'}</span>
+                    <span className="material-icons-round">{hasApplied ? 'check_circle' : getCategoryIcon(challenge.category)}</span>
                   </div>
                   <div className="flex flex-col items-end gap-1">
                     <span className="text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full border" style={{ color: city.theme.primary, borderColor: `${city.theme.primary}20` }}>
@@ -98,17 +147,22 @@ const ChallengesList: React.FC<ChallengesListProps> = ({ challenges, city, user,
                 <h3 className="text-xl font-bold text-gray-900 mb-4 leading-tight group-hover:text-blue-600 transition-colors" style={{ color: city.theme.primary }}>
                   {challenge.title}
                 </h3>
-                <p className="text-gray-500 font-medium leading-relaxed mb-8 text-sm line-clamp-3">
+                <p className="text-gray-500 font-medium leading-relaxed mb-8 text-sm">
                   {challenge.description}
                 </p>
 
                 <div className="space-y-4 mb-8">
                   <div className="flex justify-between items-end mb-1">
                     <span className="text-xs font-black text-gray-400 uppercase tracking-widest">Napredak izazova</span>
-                    <span className="text-sm font-black" style={{ color: city.theme.primary }}>{challenge.progress}%</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold text-gray-400">
+                        {ideas.filter(i => i.challenge_id === challenge.id).length} prijava
+                      </span>
+                      <span className="text-sm font-black" style={{ color: city.theme.primary }}>{calculatedProgress}%</span>
+                    </div>
                   </div>
                   <div className="w-full h-2 bg-gray-50 rounded-full overflow-hidden">
-                    <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${challenge.progress}%`, background: `linear-gradient(to right, ${city.theme.primary}, ${city.theme.secondary})` }}></div>
+                    <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${calculatedProgress}%`, background: `linear-gradient(to right, ${city.theme.primary}, ${city.theme.secondary})` }}></div>
                   </div>
                 </div>
 
@@ -160,64 +214,113 @@ const ChallengesList: React.FC<ChallengesListProps> = ({ challenges, city, user,
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="relative w-full max-w-xl bg-white rounded-[3rem] shadow-2xl overflow-hidden p-10 md:p-12"
+              className="relative w-full max-w-3xl bg-white rounded-[3rem] shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto"
               onClick={e => e.stopPropagation()}
             >
-              <div className="flex justify-between items-start mb-8">
-                <div>
-                   <h3 className="text-2xl font-black text-gray-900 tracking-tight mb-2">Prijavi rješenje</h3>
-                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Za izazov: {selectedChallenge.title}</p>
+              <div className="sticky top-0 bg-white border-b border-gray-100 p-8 md:p-10 z-10">
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                     <h3 className="text-3xl font-black text-gray-900 tracking-tight mb-2">{selectedChallenge.title}</h3>
+                     <div className="flex items-center gap-2 flex-wrap">
+                       <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-3 py-1 rounded-full bg-gray-50 border border-gray-100 flex items-center gap-1.5">
+                         <span className="material-icons-round text-sm">{getCategoryIcon(selectedChallenge.category)}</span>
+                         {selectedChallenge.category}
+                       </span>
+                       <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${
+                         selectedChallenge.priority === 'Kritično' ? 'bg-red-50 text-red-600 border border-red-200' : 
+                         selectedChallenge.priority === 'Visoko' ? 'bg-amber-50 text-amber-600 border border-amber-200' : 
+                         'bg-blue-50 text-blue-600 border border-blue-200'
+                       }`}>
+                         {selectedChallenge.priority}
+                       </span>
+                     </div>
+                  </div>
+                  <button onClick={() => setSelectedChallenge(null)} className="w-10 h-10 rounded-full bg-gray-50 text-gray-400 flex items-center justify-center hover:bg-red-50 hover:text-red-500 transition-all flex-shrink-0 ml-4">
+                    <span className="material-icons-round">close</span>
+                  </button>
                 </div>
-                <button onClick={() => setSelectedChallenge(null)} className="w-10 h-10 rounded-full bg-gray-50 text-gray-400 flex items-center justify-center hover:bg-red-50 hover:text-red-500 transition-all">
-                  <span className="material-icons-round">close</span>
-                </button>
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div>
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-2 block">Naslov vaše ideje</label>
-                  <input 
-                    autoFocus
-                    value={title}
-                    onChange={e => setTitle(e.target.value)}
-                    placeholder="npr. Automatizacija solarne mreže..."
-                    className="w-full p-5 bg-gray-50 border border-gray-100 rounded-2xl focus:bg-white focus:ring-4 focus:ring-blue-500/10 outline-none font-bold transition-all"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-2 block">Detaljan opis</label>
-                  <textarea 
-                    value={description}
-                    onChange={e => setDescription(e.target.value)}
-                    placeholder="Kako planirate riješiti ovaj izazov? Opišite prednosti..."
-                    className="w-full p-5 bg-gray-50 border border-gray-100 rounded-2xl focus:bg-white focus:ring-4 focus:ring-blue-500/10 outline-none font-medium min-h-[160px] resize-none transition-all"
-                    required
-                  />
+              <div className="p-8 md:p-10 space-y-8">
+                {/* Challenge Details */}
+                <div className="bg-gradient-to-br from-gray-50 to-white rounded-3xl p-6 border border-gray-100">
+                  <h4 className="text-sm font-black text-gray-400 uppercase tracking-widest mb-4">Opis Izazova</h4>
+                  <p className="text-gray-700 font-medium leading-relaxed text-base mb-6">
+                    {selectedChallenge.description}
+                  </p>
+                  
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div className="bg-white rounded-2xl p-4 border border-gray-100">
+                      <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Rok</p>
+                      <p className="text-sm font-black text-gray-900">{formatDate(selectedChallenge.deadline)}</p>
+                    </div>
+                    <div className="bg-white rounded-2xl p-4 border border-gray-100">
+                      <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Grant Fond</p>
+                      <p className="text-sm font-black" style={{ color: city.theme.primary }}>{selectedChallenge.fund}</p>
+                    </div>
+                    <div className="bg-white rounded-2xl p-4 border border-gray-100 col-span-2 md:col-span-1">
+                      <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Napredak</p>
+                      <div className="flex items-baseline gap-2">
+                        <p className="text-sm font-black" style={{ color: city.theme.primary }}>{calculateChallengeProgress(selectedChallenge.id)}%</p>
+                        <span className="text-[9px] text-gray-400 font-medium">
+                          ({ideas.filter(i => i.challenge_id === selectedChallenge.id).length})
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="pt-4">
-                  <button 
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="w-full py-6 rounded-3xl text-white font-black text-[11px] uppercase tracking-[0.2em] shadow-2xl transition-all flex items-center justify-center gap-3"
-                    style={{ backgroundColor: city.theme.primary, boxShadow: `0 20px 40px -10px ${city.theme.primary}40` }}
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
-                        Slanje prijave...
-                      </>
-                    ) : (
-                      <>
-                        <span className="material-icons-round text-sm">rocket_launch</span>
-                        Pošalji Adminima na Verifikaciju
-                      </>
-                    )}
-                  </button>
-                  <p className="text-[9px] text-gray-400 text-center mt-4 font-medium italic">Vaša prijava će biti poslana na pregled gradskim službama.</p>
+                {/* Submission Form */}
+                <div>
+                  <h4 className="text-xl font-black text-gray-900 mb-6">Prijavite Svoje Rješenje</h4>
+                  
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                    <div>
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-2 block">Naslov vaše ideje</label>
+                      <input 
+                        autoFocus
+                        value={title}
+                        onChange={e => setTitle(e.target.value)}
+                        placeholder="npr. Automatizacija solarne mreže..."
+                        className="w-full p-5 bg-gray-50 border border-gray-100 rounded-2xl focus:bg-white focus:ring-4 focus:ring-blue-500/10 outline-none font-bold transition-all"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-2 block">Detaljan opis</label>
+                      <textarea 
+                        value={description}
+                        onChange={e => setDescription(e.target.value)}
+                        placeholder="Kako planirate riješiti ovaj izazov? Opišite prednosti..."
+                        className="w-full p-5 bg-gray-50 border border-gray-100 rounded-2xl focus:bg-white focus:ring-4 focus:ring-blue-500/10 outline-none font-medium min-h-[160px] resize-none transition-all text-gray-900"
+                        required
+                      />
+                    </div>
+
+                    <div className="pt-4">
+                      <button 
+                        type="submit"
+                        disabled={isSubmitting}
+                        className="w-full py-6 rounded-3xl text-white font-black text-[11px] uppercase tracking-[0.2em] shadow-2xl transition-all flex items-center justify-center gap-3"
+                        style={{ backgroundColor: city.theme.primary, boxShadow: `0 20px 40px -10px ${city.theme.primary}40` }}
+                      >
+                        {isSubmitting ? (
+                          <>
+                            <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+                            Slanje prijave...
+                          </>
+                        ) : (
+                          <>
+                            <span className="material-icons-round text-sm">rocket_launch</span>
+                            Pošalji Adminima na Verifikaciju
+                          </>
+                        )}
+                      </button>
+                      <p className="text-[9px] text-gray-400 text-center mt-4 font-medium italic">Vaša prijava će biti poslana na pregled gradskim službama.</p>
+                    </div>
+                  </form>
                 </div>
-              </form>
+              </div>
             </motion.div>
           </div>
         )}

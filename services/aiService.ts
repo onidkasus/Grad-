@@ -132,25 +132,54 @@ export const AiService = {
     }
   },
 
-  rateIdea: async (title: string, description: string): Promise<number> => {
-     const prompt = `Ocijeni ovu ideju za gradski projekt na skali od 1 do 100 na temelju izvedivosti (feasibility), utjecaja (impact) i jasnoće (clarity).
-     
+  rateIdea: async (title: string, description: string): Promise<{ rating: number; reasoning: string }> => {
+     const prompt = `Ocijeni ovu ideju za gradski projekt na skali od 1 do 100 i objasni zašto si dao tu ocjenu.
+
      Naslov: ${title}
      Opis: ${description}
      
-     Vrati ISKLJUČIVO samo jedan broj (0-100). Ništa drugo.`;
+     Vrati ISKLJUČIVO JSON u sljedećem formatu (bez dodatnog teksta):
+     {
+       "rating": broj od 0 do 100,
+       "reasoning": "Kratko objašnjenje (1-2 rečenice) zašto je ova ocjena dodijeljena na temelju izvedivosti, utjecaja i jasnoće."
+     }`;
 
      try {
          const response = await AiService.chat([
              { role: 'user', content: prompt }
          ]);
          
-         const nums = response.match(/\d+/);
-         const number = parseInt(nums ? nums[0] : '50');
-         return isNaN(number) ? 50 : Math.min(100, Math.max(0, number));
+         // Clean up response
+         let cleanContent = response.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+         const jsonMatch = cleanContent.match(/\{[\s\S]*?\}/);
+         if (jsonMatch) {
+             cleanContent = jsonMatch[0];
+         }
+         
+         try {
+             const parsed = JSON.parse(cleanContent);
+             const rating = parseInt(parsed.rating) || 50;
+             const reasoning = parsed.reasoning || 'Standardna ocjena na temelju prosječne kvalitete prijedloga.';
+             
+             return {
+                 rating: Math.min(100, Math.max(0, rating)),
+                 reasoning: reasoning
+             };
+         } catch (jsonErr) {
+             // Fallback: try to extract just the number
+             const nums = response.match(/\d+/);
+             const number = parseInt(nums ? nums[0] : '50');
+             return {
+                 rating: isNaN(number) ? 50 : Math.min(100, Math.max(0, number)),
+                 reasoning: 'Ocjena generirana bez detaljne analize.'
+             };
+         }
      } catch (e) {
          console.error("AI Rating failed", e);
-         return 50; // Neutral fallback
+         return {
+             rating: 50,
+             reasoning: 'AI analiza nije dostupna. Dodijeljena neutralna ocjena.'
+         };
      }
   },
 

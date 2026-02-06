@@ -348,7 +348,7 @@ const CityCalendar: React.FC<CityCalendarProps> = ({ city, showToast, user }) =>
                         type="text" 
                         value={newEvent.title}
                         onChange={e => setNewEvent({...newEvent, title: e.target.value})}
-                        className="w-full p-4 bg-gray-50 rounded-xl font-bold border-none focus:ring-2 focus:ring-blue-500" 
+                        className="w-full p-4 bg-gray-50 rounded-xl font-bold border-none focus:ring-2 focus:ring-blue-500 text-gray-900" 
                         placeholder="Naziv događaja..."
                       />
                   </div>
@@ -368,7 +368,7 @@ const CityCalendar: React.FC<CityCalendarProps> = ({ city, showToast, user }) =>
                       <select 
                         value={newEvent.type}
                         onChange={e => setNewEvent({...newEvent, type: e.target.value as any})}
-                        className="w-full p-4 bg-gray-50 rounded-xl font-bold border-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full p-4 bg-gray-50 rounded-xl font-bold border-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                       >
                           <option value="EVENT">Događaj</option>
                           <option value="PUBLIC_HEARING">Javna Rasprava</option>
@@ -381,7 +381,7 @@ const CityCalendar: React.FC<CityCalendarProps> = ({ city, showToast, user }) =>
                       <textarea 
                         value={newEvent.description}
                         onChange={e => setNewEvent({...newEvent, description: e.target.value})}
-                        className="w-full p-4 bg-gray-50 rounded-xl font-medium border-none focus:ring-2 focus:ring-blue-500 h-24 resize-none" 
+                        className="w-full p-4 bg-gray-50 rounded-xl font-medium border-none focus:ring-2 focus:ring-blue-500 h-24 resize-none text-gray-900" 
                         placeholder="Detalji..."
                       />
                   </div>

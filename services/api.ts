@@ -205,7 +205,8 @@ export const ideasAPI = {
           updated_at: data.updatedAt?.toDate ? data.updatedAt.toDate().toISOString() : new Date().toISOString(),
           challenge_id: data.challengeID,
           // Check various casing and fallback to impactScore for legacy/consistency
-          aiRating: data.aiRating ?? data.AIRating ?? data.ai_rating ?? data.impactScore ?? 0
+          aiRating: data.aiRating ?? data.AIRating ?? data.ai_rating ?? data.impactScore ?? 0,
+          aiReasoning: data.aiReasoning ?? data.AIReasoning ?? data.ai_reasoning ?? undefined
         } as Idea;
       });
       
@@ -225,10 +226,13 @@ export const ideasAPI = {
       
       // Get AI Rating (Parallel or awaited)
       let aiRating = 50;
+      let aiReasoning = 'Standardna ocjena.';
       if (idea.title && idea.description) {
           try {
              // Don't block too long, but for now we await
-             aiRating = await AiService.rateIdea(idea.title, idea.description);
+             const aiResult = await AiService.rateIdea(idea.title, idea.description);
+             aiRating = aiResult.rating;
+             aiReasoning = aiResult.reasoning;
           } catch (e) {
              console.warn("Could not fetch AI rating", e);
           }
@@ -250,7 +254,8 @@ export const ideasAPI = {
         updatedAt: serverTimestamp(),
         challengeID: idea.challenge_id || null,
         impactScore: 10,
-        aiRating: aiRating
+        aiRating: aiRating,
+        aiReasoning: aiReasoning
       };
       
       const docRef = await addDoc(collection(db, "ideas"), ideaData);
@@ -260,6 +265,7 @@ export const ideasAPI = {
         author: user.name,
         created_at: new Date().toISOString(),
         aiRating: aiRating,
+        aiReasoning: aiReasoning,
         likes: 0,
         comments: [],
         status: 'PENDING',

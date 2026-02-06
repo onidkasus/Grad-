@@ -223,7 +223,7 @@ const DigitalVault: React.FC<{ city: CityConfig; user?: { id: string; name: stri
                     value={requestForm.documentType}
                     onChange={(e) => setRequestForm({...requestForm, documentType: e.target.value})}
                     placeholder="npr. Rodni list, Uvjerenje o prebivalištu..."
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-all"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-all text-gray-900"
                   />
                 </div>
 
@@ -296,7 +296,7 @@ const DigitalVault: React.FC<{ city: CityConfig; user?: { id: string; name: stri
                     onChange={(e) => setRequestForm({...requestForm, description: e.target.value})}
                     placeholder="Opišite zašto vam je potreban ovaj dokument..."
                     rows={4}
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-all resize-none"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-all resize-none text-gray-900"
                   />
                 </div>
 

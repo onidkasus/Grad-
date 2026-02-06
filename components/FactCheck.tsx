@@ -59,7 +59,7 @@ const FactCheck: React.FC<FactCheckProps> = ({ city }) => {
               value={claim}
               onChange={(e) => setClaim(e.target.value)}
               placeholder={`Npr. ${city?.name || 'Zadar'} je najsigurniji grad u Hrvatskoj...`}
-              className="w-full p-6 bg-gray-50 border border-gray-100 rounded-3xl focus:ring-4 outline-none transition-all font-medium text-gray-700 min-h-[120px] resize-none"
+              className="w-full p-6 bg-gray-50 border border-gray-100 rounded-3xl focus:ring-4 outline-none transition-all font-medium text-gray-900 min-h-[120px] resize-none"
               style={{ '--tw-ring-color': `${primaryColor}20` } as any}
             />
             
