@@ -167,7 +167,20 @@ const DigitalVault: React.FC<{ city: CityConfig; user?: { id: string; name: stri
                   <span className="text-[10px] font-black text-gray-900">{doc.date}</span>
                 </div>
               </div>
-              <button className="w-full mt-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg hover:shadow-xl">
+              <button
+                className="w-full mt-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg hover:shadow-xl"
+                onClick={async () => {
+                  // Try to get file URL from doc.url, otherwise fallback to a static dummy file
+                  const fileUrl = doc.url || '/dummy.pdf';
+                  // Create a temporary link and trigger download
+                  const link = document.createElement('a');
+                  link.href = fileUrl;
+                  link.download = doc.title + '.pdf';
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                }}
+              >
                 Preuzmi PDF (Digitally Signed)
               </button>
             </motion.div>
