@@ -263,7 +263,7 @@ const App: React.FC = () => {
               {activeTab === 'incubator' && <IdeaIncubator ideas={ideas} setIdeas={handleIdeasUpdate} isReadOnly={user.role === UserRole.CITIZEN} city={selectedCity} />}
               {activeTab === 'community' && <Community ideas={ideas} setIdeas={handleIdeasUpdate} city={selectedCity} polls={polls} onVote={() => showToast('Glas uspješan!', 'success')} user={user} showToast={showToast} />}
               {activeTab === 'factcheck' && <FactCheck city={selectedCity} />}
-              {activeTab === 'admin' && <AdminPortal ideas={ideas} setIdeas={handleIdeasUpdate} challenges={challenges} setChallenges={setChallenges} posts={posts} setPosts={setPosts} documentRequests={documentRequests} setDocumentRequests={setDocumentRequests} city={selectedCity} showToast={showToast} />}
+              {activeTab === 'admin' && <AdminPortal ideas={ideas} setIdeas={handleIdeasUpdate} challenges={challenges} setChallenges={setChallenges} posts={posts} setPosts={setPosts} documentRequests={documentRequests} setDocumentRequests={setDocumentRequests} city={selectedCity} setCity={setSelectedCity} showToast={showToast} />}
               {activeTab === 'account' && <UserAccount user={user} setUser={setUser} city={selectedCity} showToast={showToast} />}
               {activeTab === 'vault' && <DigitalVault city={selectedCity} user={user || undefined} documentRequests={documentRequests} onRequestDocument={handleDocumentRequest} />}
             </motion.div>
