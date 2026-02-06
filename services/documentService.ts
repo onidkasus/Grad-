@@ -68,7 +68,7 @@ export const documentService = {
       const snapshot = await getDocs(q);
       if (!snapshot.empty) return;
 
-      const MOCK_DOCS: Omit<DigitalDocument, 'id'>[] = [
+      const MOCK_DOCS: Partial<DigitalDocument>[] = [
       { 
         userId,
         title: 'Rodni List (Izvadak)', 

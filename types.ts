@@ -201,6 +201,7 @@ export interface CompanyData {
 
 export interface DigitalDocument {
   id: string;
+  userId: string;
   title: string;
   category: string;
   date: string;

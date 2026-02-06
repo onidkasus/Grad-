@@ -1,4 +1,4 @@
-[import { User, Idea, Challenge, Poll, Notification, UserRole, IncubatorStage, Category, Post, Badge, PostComment, CityEvent } from '../types';
+import { User, Idea, Challenge, Poll, Notification, UserRole, IncubatorStage, Category, Post, Badge, PostComment, CityEvent } from '../types';
 import { BADGES } from '../constants';
 import { db } from './firebase';
 import { AiService } from './aiService';
