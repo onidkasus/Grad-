@@ -1,3 +1,20 @@
+// Update user profile in Firestore
+export const updateUser = async (userId: string, updates: Partial<User>) => {
+  try {
+    const userRef = doc(db, "users", userId);
+    await updateDoc(userRef, updates);
+    // Optionally update localStorage if needed
+    const current = localStorage.getItem('grad_plus_user_data');
+    if (current) {
+      const parsed = JSON.parse(current);
+      localStorage.setItem('grad_plus_user_data', JSON.stringify({ ...parsed, ...updates }));
+    }
+    return true;
+  } catch (e) {
+    console.error('Error updating user:', e);
+    throw e;
+  }
+};
 import { User, Idea, Challenge, Poll, Notification, UserRole, IncubatorStage, Category, Post, Badge, PostComment, CityEvent } from '../types';
 import { BADGES } from '../constants';
 import { db } from './firebase';

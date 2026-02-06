@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { User, CityConfig } from '../types';
-import { getInitials } from '../services/api';
+import { getInitials, updateUser } from '../services/api';
 
 interface UserAccountProps {
   user: User;
@@ -15,10 +15,16 @@ const UserAccount: React.FC<UserAccountProps> = ({ user, setUser, city, showToas
   const [editName, setEditName] = useState(user.name);
   const [editEmail, setEditEmail] = useState(user.email);
 
-  const handleSave = () => {
-    setUser(prev => ({ ...prev, name: editName, email: editEmail }));
-    setIsEditing(false);
-    showToast('Profil uspješno ažuriran!', 'success');
+
+  const handleSave = async () => {
+    try {
+      setUser(prev => ({ ...prev, name: editName, email: editEmail }));
+      await updateUser(user.id, { name: editName, email: editEmail });
+      setIsEditing(false);
+      showToast('Profil uspješno ažuriran!', 'success');
+    } catch (e) {
+      showToast('Greška pri spremanju profila!', 'info');
+    }
   };
 
   return (
