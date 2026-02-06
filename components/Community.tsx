@@ -366,25 +366,50 @@ const Community: React.FC<CommunityProps> = ({ ideas, setIdeas, city, polls, onV
               </motion.div>
             ))
           ) : (
-            posts.map((post) => (
+            posts.map((post) => {
+              const isAdminPost = post.authorName === 'Gradska Uprava';
+              return (
               <motion.div 
                 key={post.id} 
                 layout
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-sm"
+                className={`rounded-[2.5rem] p-8 border shadow-sm ${
+                  isAdminPost 
+                    ? 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-300 shadow-md' 
+                    : 'bg-white border-gray-100'
+                }`}
               >
                 <div className="flex items-center gap-4 mb-4">
-                  <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-xs font-black text-gray-600">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-black ${
+                    isAdminPost 
+                      ? 'bg-blue-200 text-blue-900' 
+                      : 'bg-gray-100 text-gray-600'
+                  }`}>
                     {post.authorAvatar}
                   </div>
                   <div>
-                    <h4 className="text-sm font-black text-gray-900">{post.authorName}</h4>
-                    <p className="text-[10px] text-gray-400">{post.time}</p>
+                    <h4 className={`text-sm font-black ${
+                      isAdminPost ? 'text-blue-900' : 'text-gray-900'
+                    }`}>{post.authorName}</h4>
+                    <p className={`text-[10px] ${
+                      isAdminPost ? 'text-blue-600' : 'text-gray-400'
+                    }`}>{post.time}</p>
                   </div>
+                  {isAdminPost && (
+                    <div className="ml-auto">
+                      <span className="px-2 py-1 bg-blue-600 text-white text-[9px] font-black rounded-lg uppercase tracking-widest">
+                        Zvanična Objava
+                      </span>
+                    </div>
+                  )}
                 </div>
-                <p className="text-gray-700 text-base mb-6 font-medium leading-relaxed">{post.content}</p>
-                <div className="flex gap-4 border-t border-gray-50 pt-4">
+                <p className={`text-base mb-6 font-medium leading-relaxed ${
+                  isAdminPost ? 'text-blue-900' : 'text-gray-700'
+                }`}>{post.content}</p>
+                <div className={`flex gap-4 border-t pt-4 ${
+                  isAdminPost ? 'border-blue-200' : 'border-gray-50'
+                }`}>
                   <button onClick={() => handleLikePost(post.id)} className={`text-xs font-bold flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors ${post.likedByCurrentUser ? 'text-red-500 bg-red-50' : 'text-gray-400 hover:bg-gray-50'}`}>
                     <span className="material-icons-round text-sm">favorite</span> {post.likes}
                   </button>
@@ -453,7 +478,8 @@ const Community: React.FC<CommunityProps> = ({ ideas, setIdeas, city, polls, onV
                   )}
                 </AnimatePresence>
               </motion.div>
-            ))
+            );
+            })
           )}
         </div>
       </div>

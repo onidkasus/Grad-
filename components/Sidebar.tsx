@@ -54,7 +54,9 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, userRole, ci
         )}
 
         <p className="px-5 text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Glavni Izbornik</p>
-        {citizenItems.map((item) => (
+        {citizenItems
+          .filter(item => !(userRole === UserRole.ADMIN && item.id === 'dashboard'))
+          .map((item) => (
           <button
             key={item.id}
             onClick={() => setActiveTab(item.id)}
