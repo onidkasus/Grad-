@@ -209,3 +209,14 @@ export interface CityEvent {
   createdBy: string;
 }
 
+export interface DocumentRequest {
+  id: string;
+  userId: string;
+  userName: string;
+  documentType: string;
+  description: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  createdAt: string;
+  cityId: string;
+}
+

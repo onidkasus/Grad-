@@ -2,8 +2,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CITIES, BADGES } from './constants';
-import { Category, IncubatorStage, CityConfig, Challenge, Idea, User, UserRole, Notification, Poll } from './types';
-import { authAPI, ideasAPI, challengesAPI, pollsAPI } from './services/api';
+import { Category, IncubatorStage, CityConfig, Challenge, Idea, User, UserRole, Notification, Poll, Post, DocumentRequest } from './types';
+import { authAPI, ideasAPI, challengesAPI, pollsAPI, communityAPI } from './services/api';
 import { websocketService } from './services/websocket';
 
 // Components
@@ -52,7 +52,19 @@ const App: React.FC = () => {
   const [ideas, setIdeas] = useState<Idea[]>([]);
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [polls, setPolls] = useState<Poll[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [documentRequests, setDocumentRequests] = useState<DocumentRequest[]>([]);
+
+  const handleDocumentRequest = useCallback((request: Omit<DocumentRequest, 'id' | 'createdAt'>) => {
+    const newRequest: DocumentRequest = {
+      ...request,
+      id: 'REQ-' + Date.now(),
+      createdAt: new Date().toISOString()
+    };
+    setDocumentRequests(prev => [newRequest, ...prev]);
+    showToast('Zahtjev za dokument je prosljeđen administratoru', 'success');
+  }, [showToast]);
 
   // Keyboard Shortcuts
   useEffect(() => {
@@ -194,7 +206,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className={`flex min-h-screen relative overflow-hidden selection:bg-blue-600 selection:text-white transition-colors duration-500 ${theme === 'dark' ? 'dark bg-[#0a0a0c]' : 'bg-[#f5f5f7]'}`} style={cityVariables}>
+    <div className={`flex min-h-screen relative overflow-hidden selection:bg-blue-600 selection:text-white transition-colors duration-500 dark:text-gray-100 ${theme === 'dark' ? 'dark bg-[#0a0a0c]' : 'bg-[#f5f5f7]'}`} style={cityVariables}>
       
       <div className="fixed inset-0 pointer-events-none opacity-[0.03] z-0 transition-all duration-1000" style={{ background: selectedCity.theme.pattern }}></div>
 
@@ -251,9 +263,9 @@ const App: React.FC = () => {
               {activeTab === 'incubator' && <IdeaIncubator ideas={ideas} setIdeas={handleIdeasUpdate} isReadOnly={user.role === UserRole.CITIZEN} city={selectedCity} />}
               {activeTab === 'community' && <Community ideas={ideas} setIdeas={handleIdeasUpdate} city={selectedCity} polls={polls} onVote={() => showToast('Glas uspješan!', 'success')} user={user} showToast={showToast} />}
               {activeTab === 'factcheck' && <FactCheck city={selectedCity} />}
-              {activeTab === 'admin' && <AdminPortal ideas={ideas} setIdeas={handleIdeasUpdate} challenges={challenges} setChallenges={setChallenges} city={selectedCity} showToast={showToast} />}
+              {activeTab === 'admin' && <AdminPortal ideas={ideas} setIdeas={handleIdeasUpdate} challenges={challenges} setChallenges={setChallenges} posts={posts} setPosts={setPosts} documentRequests={documentRequests} setDocumentRequests={setDocumentRequests} city={selectedCity} showToast={showToast} />}
               {activeTab === 'account' && <UserAccount user={user} setUser={setUser} city={selectedCity} showToast={showToast} />}
-              {activeTab === 'vault' && <DigitalVault city={selectedCity} />}
+              {activeTab === 'vault' && <DigitalVault city={selectedCity} user={user || undefined} documentRequests={documentRequests} onRequestDocument={handleDocumentRequest} />}
             </motion.div>
           </AnimatePresence>
         </main>
