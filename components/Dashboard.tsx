@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { motion, Variants } from 'framer-motion';
 import { User, Idea, Challenge, CityConfig } from '../types';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -25,15 +25,43 @@ const itemVariants: Variants = {
 };
 
 const Dashboard: React.FC<DashboardProps> = ({ user, ideas, challenges, city, showToast, setActiveTab, onOpenAI }) => {
-  const chartData = [
-    { name: 'Sij', val: 400, pred: 400 },
-    { name: 'Velj', val: 1200, pred: 1100 },
-    { name: 'Ožu', val: 900, pred: 1000 },
-    { name: 'Tra', val: 2400, pred: 2200 },
-    { name: 'Svi', val: 1800, pred: 1900 },
-    { name: 'Lip', val: 2800, pred: 3000 },
-    { name: 'Srp', val: null, pred: 3800 },
-  ];
+  // Generate chart data from ideas and challenges
+  const chartData = useMemo(() => {
+    // Group ideas and challenges by month
+    const months = ['Sij', 'Velj', 'Ožu', 'Tra', 'Svi', 'Lip', 'Srp', 'Kol', 'Ruj', 'Lis', 'Stu', 'Pro'];
+    const now = new Date();
+    const year = now.getFullYear();
+    const monthCounts: { [key: string]: { val: number; pred: number } } = {};
+    months.forEach((m, idx) => {
+      monthCounts[m] = { val: 0, pred: 0 };
+    });
+
+    // Count ideas
+    ideas.forEach(idea => {
+      const d = new Date(idea.date);
+      if (d.getFullYear() === year) {
+        const mIdx = d.getMonth();
+        const mName = months[mIdx];
+        if (mName) monthCounts[mName].val++;
+      }
+    });
+    // Count challenges
+    challenges.forEach(challenge => {
+      const d = new Date(challenge.created_at);
+      if (d.getFullYear() === year) {
+        const mIdx = d.getMonth();
+        const mName = months[mIdx];
+        if (mName) monthCounts[mName].pred++;
+      }
+    });
+
+    // Build chart array
+    return months.map(m => ({
+      name: m,
+      val: monthCounts[m].val,
+      pred: monthCounts[m].pred
+    }));
+  }, [ideas, challenges]);
 
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
