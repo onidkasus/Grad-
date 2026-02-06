@@ -43,7 +43,7 @@ const UserAccount: React.FC<UserAccountProps> = ({ user, setUser, city, showToas
                 <input 
                   value={editName}
                   onChange={e => setEditName(e.target.value)}
-                  className="w-full p-3 bg-gray-50 rounded-xl font-black text-2xl border border-blue-200 text-gray-900"
+                  className="w-full p-3 bg-gray-50 rounded-xl font-black text-2xl border border-blue-200"
                 />
                 <input 
                   value={editEmail}
@@ -60,11 +60,11 @@ const UserAccount: React.FC<UserAccountProps> = ({ user, setUser, city, showToas
 
             <div className="flex flex-wrap justify-center md:justify-start gap-4 mt-4">
               {isEditing ? (
-                  <button onClick={handleSave} className="px-6 py-3 bg-green-600 text-white font-bold rounded-2xl shadow-lg hover:-translate-y-0.5 transition-all">Spremi Promjene</button>
+                 <button onClick={handleSave} className="px-6 py-3 bg-green-600 text-white font-bold rounded-2xl shadow-lg hover:-translate-y-0.5 transition-all">Spremi Promjene</button>
               ) : (
-                  <button onClick={() => setIsEditing(true)} className="px-6 py-3 bg-gray-900 text-white font-bold rounded-2xl shadow-lg hover:-translate-y-0.5 transition-all">Uredi Profil</button>
+                 <button onClick={() => setIsEditing(true)} className="px-6 py-3 bg-gray-900 text-white font-bold rounded-2xl shadow-lg hover:-translate-y-0.5 transition-all">Uredi Profil</button>
               )}
-                <button onClick={() => showToast('Digitalna osobna je već povezana.', 'info')} className="px-6 py-3 bg-white border border-gray-100 text-gray-900 font-bold rounded-2xl hover:bg-gray-50 transition-all">Digitalna Osobna</button>
+              <button onClick={() => showToast('Digitalna osobna je već povezana.', 'info')} className="px-6 py-3 bg-white border border-gray-100 text-gray-900 font-bold rounded-2xl hover:bg-gray-50 transition-all">Digitalna Osobna</button>
             </div>
           </div>
         </div>
@@ -125,7 +125,7 @@ const UserAccount: React.FC<UserAccountProps> = ({ user, setUser, city, showToas
       </div>
 
       <div className="text-center pt-10 border-t border-gray-50">
-        <p className="text-2xl font-black text-blue-600/20 italic tracking-tighter">Od građana za građane</p>
+         <p className="text-2xl font-black text-blue-600/20 italic tracking-tighter">Od građana za građane</p>
       </div>
     </div>
   );

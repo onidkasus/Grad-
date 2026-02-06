@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { DigitalDocument, CityConfig, DocumentRequest } from '../types';
+import { motion } from 'framer-motion';
+import { DigitalDocument, CityConfig } from '../types';
 
 const MOCK_DOCS: DigitalDocument[] = [
   { id: 'DOC-001', title: 'Rodni List (Izvadak)', category: 'Statusna stanja', date: '12.03.2024.', issuer: 'Matični ured Zadar', status: 'VERIFIED', fileType: 'PDF' },
@@ -9,39 +9,8 @@ const MOCK_DOCS: DigitalDocument[] = [
   { id: 'DOC-003', title: 'Građevinska dozvola - Privremena', category: 'Graditeljstvo', date: '20.03.2024.', issuer: 'Upravni odjel za prostorno uređenje', status: 'PENDING', fileType: 'PDF' },
 ];
 
-interface DigitalVaultProps {
-  city: CityConfig;
-  documentRequests?: DocumentRequest[];
-  onRequestDocument?: (request: Omit<DocumentRequest, 'id' | 'createdAt'>) => void;
-  user?: { name: string; id: string };
-}
-
-const DigitalVault: React.FC<DigitalVaultProps> = ({ city, documentRequests = [], onRequestDocument, user }) => {
+const DigitalVault: React.FC<{ city: CityConfig }> = ({ city }) => {
   const [filter, setFilter] = useState('Svi');
-  const [showRequestModal, setShowRequestModal] = useState(false);
-  const [requestDocType, setRequestDocType] = useState('');
-  const [requestDescription, setRequestDescription] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const handleSubmitRequest = () => {
-    if (!requestDocType.trim() || !user) return;
-    
-    setIsSubmitting(true);
-    const newRequest: Omit<DocumentRequest, 'id' | 'createdAt'> = {
-      userId: user.id,
-      userName: user.name,
-      documentType: requestDocType,
-      description: requestDescription,
-      status: 'PENDING',
-      cityId: city.id
-    };
-    
-    onRequestDocument?.(newRequest);
-    setRequestDocType('');
-    setRequestDescription('');
-    setShowRequestModal(false);
-    setIsSubmitting(false);
-  };
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -64,12 +33,7 @@ const DigitalVault: React.FC<DigitalVaultProps> = ({ city, documentRequests = []
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {MOCK_DOCS.filter(doc => {
-          if (filter === 'Svi') return true;
-          if (filter === 'Verificirani') return doc.status === 'VERIFIED';
-          if (filter === 'U obradi') return doc.status === 'PENDING';
-          return true;
-        }).map(doc => (
+        {MOCK_DOCS.map(doc => (
           <motion.div 
             key={doc.id}
             whileHover={{ y: -5 }}
@@ -100,83 +64,16 @@ const DigitalVault: React.FC<DigitalVaultProps> = ({ city, documentRequests = []
                </div>
             </div>
 
-            <button className="w-full mt-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm hover:shadow-md">
+            <button className="w-full mt-8 py-4 bg-gray-50 group-hover:bg-gray-900 group-hover:text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all">
               Preuzmi PDF (Digitally Signed)
             </button>
           </motion.div>
         ))}
         
-        <motion.button
-          onClick={() => setShowRequestModal(true)}
-          whileHover={{ y: -5 }}
-          className="bg-gray-50 border-2 border-dashed border-gray-200 rounded-[2.5rem] p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-gray-100 transition-all w-full"
-        >
+        <div className="bg-gray-50 border-2 border-dashed border-gray-200 rounded-[2.5rem] p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-gray-100 transition-all">
           <span className="material-icons-round text-4xl text-gray-300 mb-4">cloud_upload</span>
           <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Zatraži novi dokument</p>
-        </motion.button>
-
-        <AnimatePresence>
-          {showRequestModal && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowRequestModal(false)}
-              className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
-            >
-              <motion.div
-                initial={{ scale: 0.95, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.95, opacity: 0 }}
-                onClick={e => e.stopPropagation()}
-                className="bg-white rounded-[2.5rem] p-8 max-w-md w-full shadow-2xl"
-              >
-                <h3 className="text-2xl font-black text-gray-900 mb-2">Zatraži Dokument</h3>
-                <p className="text-sm text-gray-500 mb-6">Unesite tip dokumenta koji trebate</p>
-                
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-xs font-black text-gray-600 uppercase tracking-widest block mb-2">Tip Dokumenta</label>
-                    <input
-                      type="text"
-                      value={requestDocType}
-                      onChange={e => setRequestDocType(e.target.value)}
-                      placeholder="npr. Potvrda o kućanstvu"
-                      className="w-full p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/40"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="text-xs font-black text-gray-600 uppercase tracking-widest block mb-2">Napomena (Opcionalno)</label>
-                    <textarea
-                      value={requestDescription}
-                      onChange={e => setRequestDescription(e.target.value)}
-                      placeholder="Unesite dodatne informacije..."
-                      rows={3}
-                      className="w-full p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/40 resize-none"
-                    />
-                  </div>
-                </div>
-                
-                <div className="flex gap-3 mt-8">
-                  <button
-                    onClick={() => setShowRequestModal(false)}
-                    className="flex-1 px-4 py-3 text-gray-900 border border-gray-200 rounded-xl font-bold hover:bg-gray-50 transition-all"
-                  >
-                    Otkaži
-                  </button>
-                  <button
-                    onClick={handleSubmitRequest}
-                    disabled={!requestDocType.trim() || isSubmitting}
-                    className="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                  >
-                    {isSubmitting ? 'Slanje...' : 'Zatraži'}
-                  </button>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        </div>
       </div>
     </div>
   );
