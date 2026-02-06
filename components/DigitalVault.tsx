@@ -1,13 +1,10 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DigitalDocument, CityConfig } from '../types';
+import { documentService } from '../services/documentService';
 
-const MOCK_DOCS: DigitalDocument[] = [
-  { id: 'DOC-001', title: 'Rodni List (Izvadak)', category: 'Statusna stanja', date: '12.03.2024.', issuer: 'Matični ured Zadar', status: 'VERIFIED', fileType: 'PDF' },
-  { id: 'DOC-002', title: 'Rješenje o komunalnoj naknadi', category: 'Financije', date: '01.02.2024.', issuer: 'Grad Zadar - Odjel za financije', status: 'VERIFIED', fileType: 'PDF' },
-  { id: 'DOC-003', title: 'Građevinska dozvola - Privremena', category: 'Graditeljstvo', date: '20.03.2024.', issuer: 'Upravni odjel za prostorno uređenje', status: 'PENDING', fileType: 'PDF' },
-];
+// ...existing code...
 
 const DOCUMENT_CATEGORIES = [
   { name: 'Statusna stanja', icon: 'badge', color: 'blue' },
@@ -19,7 +16,7 @@ const DOCUMENT_CATEGORIES = [
   { name: 'Ostalo', icon: 'folder_open', color: 'gray' }
 ];
 
-const DigitalVault: React.FC<{ city: CityConfig }> = ({ city }) => {
+const DigitalVault: React.FC<{ city: CityConfig; user?: { id: string; name: string } }> = ({ city, user }) => {
   const [filter, setFilter] = useState('Svi');
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [requestForm, setRequestForm] = useState({
@@ -28,28 +25,60 @@ const DigitalVault: React.FC<{ city: CityConfig }> = ({ city }) => {
     description: '',
     urgency: 'normal'
   });
+  const [documents, setDocuments] = useState<DigitalDocument[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleRequestSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    const fetchDocs = async () => {
+      if (!user?.id) {
+        setDocuments([]);
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
+      setError(null);
+      try {
+        const docs = await documentService.getUserDocuments(user.id);
+        setDocuments(docs);
+      } catch (err) {
+        setError('Greška pri dohvaćanju dokumenata.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDocs();
+  }, [user?.id]);
+
+  const handleRequestSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!requestForm.category) {
-      alert('Molimo odaberite kategoriju dokumenta.');
+    if (!requestForm.category || !requestForm.documentType || !user) {
+      alert('Molimo ispunite sva obavezna polja.');
       return;
     }
-    
-    console.log('Document request:', requestForm);
-    // Here you would send the request to your backend
-    alert('Zahtjev za dokumentom je poslan! Obavijest ćete dobiti kada dokument bude dostupan.');
-    setShowRequestModal(false);
-    setRequestForm({
-      documentType: '',
-      category: '',
-      description: '',
-      urgency: 'normal'
-    });
+    try {
+      await documentService.createDocumentRequest({
+        userId: user.id,
+        userName: user.name,
+        documentType: requestForm.documentType,
+        description: requestForm.description,
+        status: 'PENDING',
+        cityId: city.id
+      });
+      alert('Zahtjev za dokumentom je poslan! Obavijest ćete dobiti kada dokument bude dostupan.');
+      setShowRequestModal(false);
+      setRequestForm({
+        documentType: '',
+        category: '',
+        description: '',
+        urgency: 'normal'
+      });
+    } catch (err) {
+      alert('Greška pri slanju zahtjeva.');
+    }
   };
 
-  const filteredDocs = MOCK_DOCS.filter(doc => {
+  const filteredDocs = documents.filter(doc => {
     if (filter === 'Svi') return true;
     if (filter === 'Verificirani') return doc.status === 'VERIFIED';
     if (filter === 'U obradi') return doc.status === 'PENDING';
@@ -57,9 +86,9 @@ const DigitalVault: React.FC<{ city: CityConfig }> = ({ city }) => {
   });
 
   const getDocCount = (filterType: string) => {
-    if (filterType === 'Svi') return MOCK_DOCS.length;
-    if (filterType === 'Verificirani') return MOCK_DOCS.filter(d => d.status === 'VERIFIED').length;
-    if (filterType === 'U obradi') return MOCK_DOCS.filter(d => d.status === 'PENDING').length;
+    if (filterType === 'Svi') return documents.length;
+    if (filterType === 'Verificirani') return documents.filter(d => d.status === 'VERIFIED').length;
+    if (filterType === 'U obradi') return documents.filter(d => d.status === 'PENDING').length;
     return 0;
   };
 
@@ -87,7 +116,21 @@ const DigitalVault: React.FC<{ city: CityConfig }> = ({ city }) => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredDocs.length === 0 ? (
+        {loading ? (
+          <div className="col-span-full bg-gray-50 rounded-3xl p-12 text-center">
+            <div className="flex flex-col items-center">
+              <span className="material-icons-round text-6xl text-gray-300 mb-4">hourglass_empty</span>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Učitavanje dokumenata...</h3>
+            </div>
+          </div>
+        ) : error ? (
+          <div className="col-span-full bg-red-50 rounded-3xl p-12 text-center">
+            <div className="flex flex-col items-center">
+              <span className="material-icons-round text-6xl text-red-300 mb-4">error</span>
+              <h3 className="text-xl font-bold text-red-900 mb-2">{error}</h3>
+            </div>
+          </div>
+        ) : filteredDocs.length === 0 ? (
           <div className="col-span-full bg-gray-50 rounded-3xl p-12 text-center">
             <div className="flex flex-col items-center">
               <span className="material-icons-round text-6xl text-gray-300 mb-4">folder_off</span>
@@ -97,43 +140,39 @@ const DigitalVault: React.FC<{ city: CityConfig }> = ({ city }) => {
           </div>
         ) : (
           filteredDocs.map(doc => (
-          <motion.div 
-            key={doc.id}
-            whileHover={{ y: -5 }}
-            className="bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-sm hover:shadow-xl transition-all group"
-          >
-            <div className="flex justify-between items-start mb-6">
-              <div className="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-all">
-                <span className="material-icons-round text-2xl">description</span>
+            <motion.div 
+              key={doc.id}
+              whileHover={{ y: -5 }}
+              className="bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-sm hover:shadow-xl transition-all group"
+            >
+              <div className="flex justify-between items-start mb-6">
+                <div className="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-all">
+                  <span className="material-icons-round text-2xl">description</span>
+                </div>
+                <span className={`text-[8px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${
+                  doc.status === 'VERIFIED' ? 'bg-green-50 text-green-600' : 'bg-amber-50 text-amber-600'
+                }`}>
+                  {doc.status}
+                </span>
               </div>
-              <span className={`text-[8px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${
-                doc.status === 'VERIFIED' ? 'bg-green-50 text-green-600' : 'bg-amber-50 text-amber-600'
-              }`}>
-                {doc.status}
-              </span>
-            </div>
-            
-            <h3 className="text-lg font-black text-gray-900 mb-2 leading-tight">{doc.title}</h3>
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-6">{doc.category}</p>
-            
-            <div className="space-y-3 pt-6 border-t border-gray-50">
-               <div className="flex justify-between items-center">
+              <h3 className="text-lg font-black text-gray-900 mb-2 leading-tight">{doc.title}</h3>
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-6">{doc.category}</p>
+              <div className="space-y-3 pt-6 border-t border-gray-50">
+                <div className="flex justify-between items-center">
                   <span className="text-[9px] font-bold text-gray-400 uppercase">Izdavatelj:</span>
                   <span className="text-[10px] font-black text-gray-900">{doc.issuer}</span>
-               </div>
-               <div className="flex justify-between items-center">
+                </div>
+                <div className="flex justify-between items-center">
                   <span className="text-[9px] font-bold text-gray-400 uppercase">Datum:</span>
                   <span className="text-[10px] font-black text-gray-900">{doc.date}</span>
-               </div>
-            </div>
-
-            <button className="w-full mt-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg hover:shadow-xl">
-              Preuzmi PDF (Digitally Signed)
-            </button>
-          </motion.div>
+                </div>
+              </div>
+              <button className="w-full mt-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg hover:shadow-xl">
+                Preuzmi PDF (Digitally Signed)
+              </button>
+            </motion.div>
           ))
         )}
-        
         <div 
           onClick={() => setShowRequestModal(true)}
           className="bg-gray-50 border-2 border-dashed border-gray-200 rounded-[2.5rem] p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-gray-100 hover:border-blue-400 transition-all"
