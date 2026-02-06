@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DigitalDocument, CityConfig } from '../types';
 import { documentService } from '../services/documentService';
@@ -167,20 +168,7 @@ const DigitalVault: React.FC<{ city: CityConfig; user?: { id: string; name: stri
                   <span className="text-[10px] font-black text-gray-900">{doc.date}</span>
                 </div>
               </div>
-              <button
-                className="w-full mt-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg hover:shadow-xl"
-                onClick={async () => {
-                  // Try to get file URL from doc.url, otherwise fallback to a static dummy file
-                  const fileUrl = doc.url || '/dummy.pdf';
-                  // Create a temporary link and trigger download
-                  const link = document.createElement('a');
-                  link.href = fileUrl;
-                  link.download = doc.title + '.pdf';
-                  document.body.appendChild(link);
-                  link.click();
-                  document.body.removeChild(link);
-                }}
-              >
+              <button className="w-full mt-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg hover:shadow-xl">
                 Preuzmi PDF (Digitally Signed)
               </button>
             </motion.div>
@@ -196,36 +184,38 @@ const DigitalVault: React.FC<{ city: CityConfig; user?: { id: string; name: stri
       </div>
 
       {/* Request Document Modal */}
-      <AnimatePresence>
-        {showRequestModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4"
-            onClick={() => setShowRequestModal(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="bg-white rounded-3xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto relative"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex justify-between items-start mb-6">
-                <div>
-                  <h2 className="text-3xl font-black text-gray-900 mb-2">Zatraži Novi Dokument</h2>
-                  <p className="text-gray-500 font-medium">Popunite formu za zahtjev službenog dokumenta</p>
-                </div>
-                <button
-                  onClick={() => setShowRequestModal(false)}
-                  className="text-gray-400 hover:text-gray-900 transition-colors"
+      {typeof document !== 'undefined' &&
+        createPortal(
+          <AnimatePresence>
+            {showRequestModal && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4"
+                onClick={() => setShowRequestModal(false)}
+              >
+                <motion.div
+                  initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                  animate={{ scale: 1, opacity: 1, y: 0 }}
+                  exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                  className="bg-white rounded-3xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto relative"
+                  onClick={(e) => e.stopPropagation()}
                 >
-                  <span className="material-icons-round text-3xl">close</span>
-                </button>
-              </div>
+                  <div className="flex justify-between items-start mb-6">
+                    <div>
+                      <h2 className="text-3xl font-black text-gray-900 mb-2">Zatraži Novi Dokument</h2>
+                      <p className="text-gray-500 font-medium">Popunite formu za zahtjev službenog dokumenta</p>
+                    </div>
+                    <button
+                      onClick={() => setShowRequestModal(false)}
+                      className="text-gray-400 hover:text-gray-900 transition-colors"
+                    >
+                      <span className="material-icons-round text-3xl">close</span>
+                    </button>
+                  </div>
 
-              <form onSubmit={handleRequestSubmit} className="space-y-6">
+                  <form onSubmit={handleRequestSubmit} className="space-y-6">
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-2">
                     Vrsta Dokumenta *
@@ -328,11 +318,13 @@ const DigitalVault: React.FC<{ city: CityConfig; user?: { id: string; name: stri
                     Pošalji Zahtjev
                   </button>
                 </div>
-              </form>
-            </motion.div>
-          </motion.div>
+                  </form>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>,
+          document.body
         )}
-      </AnimatePresence>
     </div>
   );
 };

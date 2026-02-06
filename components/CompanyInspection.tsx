@@ -21,17 +21,6 @@ function getProfitColor(profit: number): string {
   return profit >= 0 ? '#30d158' : '#ff453a';
 }
 
-function getGrowthIndicator(current: number, previous: number): { text: string; color: string } {
-  if (!previous) return { text: '', color: '' };
-  const growth = ((current - previous) / previous) * 100;
-  if (growth > 0) {
-    return { text: `↑ ${growth.toFixed(1)}%`, color: '#30d158' };
-  } else if (growth < 0) {
-    return { text: `↓ ${Math.abs(growth).toFixed(1)}%`, color: '#ff453a' };
-  }
-  return { text: '→ 0%', color: '#8e8e93' };
-}
-
 interface CompanyInspectionProps {
   showToast?: (msg: string, type?: 'success' | 'info') => void;
 }
@@ -51,44 +40,8 @@ const slideUpVariants: Variants = {
   visible: { y: 0, opacity: 1, transition: { type: "spring", stiffness: 100, damping: 20, delay: 0.1 } }
 };
 
-const FinancialCard = ({ title, data, field, format, calculateGrowth, colorFunc }: any) => {
-    return (
-        <motion.div 
-          variants={itemVariants}
-          whileHover={{ scale: 1.02, y: -4 }}
-          className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-default"
-        >
-            <h3 className="text-sm font-semibold text-gray-700 mb-5 pb-3 border-b border-gray-100">{title}</h3>
-            <div className="space-y-5">
-                {data.map((fin: any, i: number) => {
-                    const nextYear = data[i + 1];
-                    const growth = nextYear ? calculateGrowth(fin[field], nextYear[field]) : null;
-                    const valueColor = colorFunc ? colorFunc(fin[field]) : undefined;
-                    
-                    return (
-                        <motion.div 
-                          key={fin.year} 
-                          whileHover={{ x: 4 }}
-                          className="flex justify-between items-center group"
-                        >
-                            <span className="text-gray-500 font-medium text-sm">{fin.year}</span>
-                            <div className="text-right flex flex-col items-end">
-                                <span className={`font-semibold text-base ${!colorFunc ? 'text-gray-900' : ''}`} style={{ color: valueColor }}>
-                                    {format(fin[field])}
-                                </span>
-                                {growth && growth.text && (
-                                    <span className="text-xs font-medium mt-1 px-2 py-1 rounded-full bg-gray-50" style={{ color: growth.color }}>
-                                        {growth.text}
-                                    </span>
-                                )}
-                            </div>
-                        </motion.div>
-                    );
-                })}
-            </div>
-        </motion.div>
-    );
-};
+const displayValue = (value: string | undefined | null) => value && value !== '-' ? value : 'N/A';
+const isMissing = (value: string | undefined | null) => !value || value === '-' || value === 'N/A';
 
 const CompanyInspection: React.FC<CompanyInspectionProps> = ({ showToast }) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -154,8 +107,7 @@ const CompanyInspection: React.FC<CompanyInspectionProps> = ({ showToast }) => {
               transition={{ delay: 0.2 }}
               className="text-xl text-white/90 font-medium max-w-2xl leading-relaxed"
             >
-              Brz i jednostavan pregled financijskih podataka hrvatskih tvrtki. Pronađite najpotrebnije informacije o bilo kojoj
-              <span className="font-semibold"> tvrtki</span> iz baze.
+              Detaljne financijske podatke, vlasničku strukturu i sve što trebate znati o bilo kojoj tvrtki u Hrvatskoj
             </motion.p>
           </div>
         </div>
@@ -182,7 +134,7 @@ const CompanyInspection: React.FC<CompanyInspectionProps> = ({ showToast }) => {
                   <h2 className="text-4xl font-bold text-gray-900 mb-3">
                     Pronađite Tvrtku
                   </h2>
-                  <p className="text-gray-600 text-base max-w-2xl">Detaljne financijske podatke, vlasničku strukturu i sve što trebate znati o bilo kojoj tvrtki u Hrvatskoj</p>
+                  <p className="text-gray-600 text-base max-w-2xl">Financijske podatke, vlasničku strukturu, kontakte i sve što trebate znati</p>
                 </div>
               </div>
               
@@ -246,167 +198,226 @@ const CompanyInspection: React.FC<CompanyInspectionProps> = ({ showToast }) => {
                 {/* Header Card */}
                 <motion.section 
                   variants={slideUpVariants}
-                  className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-gray-100 relative overflow-hidden group hover:shadow-md transition-all"
+                  className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-gray-100 relative overflow-hidden"
                 >
                   <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-blue-500/5 to-transparent rounded-full -mr-20 -mt-20"></div>
                   
-                  <div className="flex flex-col md:flex-row justify-between items-start gap-8 relative z-10">
-                    <div className="flex-1">
-                      <div className="flex items-start justify-between mb-4">
-                          <motion.h2 
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ delay: 0.2 }}
-                            className="text-4xl md:text-5xl font-bold text-gray-900"
-                          >
-                            {currentCompany.name}
-                          </motion.h2>
-                          <div className="flex flex-wrap gap-2 md:hidden">
-                            <span className="px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 text-xs font-medium">{currentCompany.status}</span>
-                          </div>
-                      </div>
-                      <p className="text-gray-600 font-medium text-base mb-3">{currentCompany.fullName}</p>
-                      <p className="text-gray-500 text-sm">
-                          {currentCompany.address}
-                      </p>
-                    </div>
+                  <div className="relative z-10">
+                    <motion.h2 
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.2 }}
+                      className="text-5xl md:text-6xl font-black text-gray-900 mb-2"
+                    >
+                      {currentCompany.name}
+                    </motion.h2>
+                    <p className="text-gray-600 font-medium text-lg mb-4">{currentCompany.address}</p>
                     
-                    <div className="flex flex-col items-end gap-3 hidden md:flex">
-                        <div className="flex items-center gap-2">
-                             <span className="px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 text-xs font-medium">{currentCompany.status}</span>
-                             <span className="px-3 py-1.5 rounded-lg bg-gray-50 text-gray-700 border border-gray-200 text-xs font-medium">Rating: {currentCompany.rating}</span>
-                        </div>
-                        <div>
-                             <span
-                                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
-                                    currentCompany.blocked
-                                    ? 'bg-red-50 text-red-700 border-red-200'
-                                    : 'bg-green-50 text-green-700 border-green-200'
-                                }`}
-                             >
-                                {currentCompany.blocked ? 'Blokirana' : 'Aktivna'}
-                            </span>
-                        </div>
+                    <div className="flex flex-wrap gap-2 mb-6">
+                      <span className="px-3 py-1.5 rounded-lg bg-blue-100 text-blue-700 text-xs font-semibold">{currentCompany.status}</span>
+                      {currentCompany.inBlockade && <span className="px-3 py-1.5 rounded-lg bg-red-100 text-red-700 text-xs font-semibold">U BLOKADI</span>}
                     </div>
+
+                    {!isMissing(currentCompany.description) && (
+                      <p className="text-gray-700 leading-relaxed mt-4 text-base">{currentCompany.description}</p>
+                    )}
                   </div>
-
-                  <motion.div 
-                    variants={itemVariants}
-                    className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-8 pt-8 border-t border-gray-100"
-                  >
-                      <div className="space-y-1">
-                        <span className="text-xs uppercase text-gray-400 font-semibold tracking-wider">OIB</span>
-                        <p className="font-semibold text-gray-900 text-lg">{currentCompany.oib}</p>
-                      </div>
-                      <div className="space-y-1">
-                        <span className="text-xs uppercase text-gray-400 font-semibold tracking-wider">MBS</span>
-                        <p className="font-semibold text-gray-900 text-lg">{currentCompany.mbs}</p>
-                      </div>
-                      <div className="space-y-1">
-                        <span className="text-xs uppercase text-gray-400 font-semibold tracking-wider">Osnovan</span>
-                        <p className="font-semibold text-gray-900 text-lg">{currentCompany.founded}</p>
-                      </div>
-                      <div className="space-y-1">
-                        <span className="text-xs uppercase text-gray-400 font-semibold tracking-wider">Veličina</span>
-                        <p className="font-black text-gray-900 text-lg">{currentCompany.size}</p>
-                      </div>
-                  </motion.div>
-
-                  <motion.div 
-                    variants={itemVariants}
-                    className="flex flex-wrap gap-4 mt-8"
-                  >
-                      <a href={`tel:${currentCompany.phone}`} className="text-base font-medium text-blue-600 hover:text-blue-700 transition-colors">
-                        {currentCompany.phone}
-                      </a>
-                      <span className="text-gray-300">•</span>
-                      <a href={`mailto:${currentCompany.email}`} className="text-base font-medium text-blue-600 hover:text-blue-700 transition-colors">
-                        {currentCompany.email}
-                      </a>
-                      <span className="text-gray-300">•</span>
-                      <a href={`https://${currentCompany.website}`} target="_blank" rel="noopener noreferrer" className="text-base font-medium text-blue-600 hover:text-blue-700 transition-colors">
-                        {currentCompany.website}
-                      </a>
-                  </motion.div>
                 </motion.section>
 
-                {/* Financial Data */}
+                {/* Basic Info Grid */}
                 <motion.section 
                   variants={slideUpVariants}
-                  className="space-y-8"
+                  className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-gray-100"
                 >
-                  <div>
-                    <h2 className="text-3xl font-bold text-gray-900 mb-2">
-                      Financijski Podaci
-                    </h2>
-                    <p className="text-gray-500 text-sm">Pregled financijskih metrika za zadnje tri godine</p>
+                  <h3 className="text-2xl font-bold mb-6 text-gray-900">Osnovni Podaci</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {[
+                      { label: 'OIB', value: currentCompany.oib },
+                      { label: 'MBS', value: currentCompany.mbs },
+                      { label: 'Datum osnivanja', value: currentCompany.founded },
+                      { label: 'Djelatnost', value: currentCompany.activity },
+                      { label: 'Veličina', value: currentCompany.size },
+                      { label: 'Rating', value: currentCompany.rating }
+                    ]
+                      .filter(item => !isMissing(item.value))
+                      .map((item) => (
+                        <motion.div key={item.label} variants={itemVariants} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                          <span className="text-xs font-black uppercase tracking-widest text-gray-400">{item.label}</span>
+                          <p className="text-base font-semibold text-gray-900 mt-2">{displayValue(item.value)}</p>
+                        </motion.div>
+                      ))}
                   </div>
-                  <motion.div 
-                    variants={containerVariants}
-                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
-                  >
-                    <FinancialCard
-                      title="Ukupni Dohodak"
-                      data={currentCompany.financials}
-                      field="income"
-                      format={formatCurrency}
-                      calculateGrowth={getGrowthIndicator}
-                    />
-                    <FinancialCard
-                      title="Ukupni Troškovi"
-                      data={currentCompany.financials}
-                      field="expenses"
-                      format={formatCurrency}
-                      calculateGrowth={getGrowthIndicator}
-                    />
-                    <FinancialCard
-                      title="Dobit/Gubitak"
-                      data={currentCompany.financials}
-                      field="profit"
-                      format={formatCurrency}
-                      calculateGrowth={getGrowthIndicator}
-                      colorFunc={getProfitColor}
-                    />
-                    <FinancialCard
-                      title="Zaposlenici"
-                      data={currentCompany.financials}
-                      field="employees"
-                      format={formatNumber}
-                      calculateGrowth={getGrowthIndicator}
-                    />
-                  </motion.div>
                 </motion.section>
 
-                {/* Management */}
-                <motion.section 
-                  variants={slideUpVariants}
-                  className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-gray-100 hover:shadow-md transition-all"
-                >
-                  <h2 className="text-3xl font-bold mb-8 text-gray-900">
-                    Upravljanje i Vlasništvo
-                  </h2>
-                  <div className="grid md:grid-cols-2 gap-12">
-                    <motion.div variants={itemVariants}>
-                       <h4 className="text-sm font-semibold text-gray-500 mb-4">Vlasnik</h4>
-                       <p className="font-semibold text-gray-900 text-lg leading-relaxed">{currentCompany.owner}</p>
-                    </motion.div>
-                    <motion.div variants={itemVariants}>
-                       <h4 className="text-sm font-semibold text-gray-500 mb-4">Direktori</h4>
-                       <ul className="space-y-3">
-                         {currentCompany.directors.map((director, idx) => (
-                            <motion.li 
-                              key={idx}
-                              whileHover={{ x: 4 }}
-                              className="font-medium text-gray-900 text-base flex items-center gap-3"
-                            >
-                                <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                {/* Contact Information */}
+                {(!isMissing(currentCompany.phone) || !isMissing(currentCompany.email) || !isMissing(currentCompany.website) || (currentCompany.phones && currentCompany.phones.length > 0)) && (
+                  <motion.section 
+                    variants={slideUpVariants}
+                    className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-gray-100"
+                  >
+                    <h3 className="text-2xl font-bold mb-6 text-gray-900">Kontakti</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {!isMissing(currentCompany.phone) && (
+                        <motion.div variants={itemVariants} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                          <span className="text-xs font-black uppercase tracking-widest text-gray-400">Glavni Telefon</span>
+                          <p className="text-base font-semibold text-gray-900 mt-2">{displayValue(currentCompany.phone)}</p>
+                        </motion.div>
+                      )}
+                      {!isMissing(currentCompany.email) && (
+                        <motion.div variants={itemVariants} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                          <span className="text-xs font-black uppercase tracking-widest text-gray-400">E-mail</span>
+                          <p className="text-base font-semibold text-gray-900 mt-2">{displayValue(currentCompany.email)}</p>
+                        </motion.div>
+                      )}
+                      {!isMissing(currentCompany.website) && (
+                        <motion.div variants={itemVariants} className="bg-gray-50 rounded-xl p-4 border border-gray-100 md:col-span-2">
+                          <span className="text-xs font-black uppercase tracking-widest text-gray-400">Web stranica</span>
+                          <a href={currentCompany.website} target="_blank" rel="noopener noreferrer" className="text-base font-semibold text-blue-600 hover:text-blue-700 mt-2 block truncate">{displayValue(currentCompany.website)}</a>
+                        </motion.div>
+                      )}
+                      {currentCompany.phones && currentCompany.phones.length > 0 && (
+                        <motion.div variants={itemVariants} className="bg-gray-50 rounded-xl p-4 border border-gray-100 md:col-span-2">
+                          <span className="text-xs font-black uppercase tracking-widest text-gray-400">Svi Telefonski Brojevi</span>
+                          <div className="mt-2 space-y-1">
+                            {currentCompany.phones.map((phone, idx) => (
+                              <p key={idx} className="text-base font-medium text-gray-900">{phone}</p>
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
+                    </div>
+                  </motion.section>
+                )}
+
+                {/* Ownership & Management */}
+                {(!isMissing(currentCompany.owner) || (currentCompany.directors && currentCompany.directors.length > 0)) && (
+                  <motion.section 
+                    variants={slideUpVariants}
+                    className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-gray-100"
+                  >
+                    <h3 className="text-2xl font-bold mb-6 text-gray-900">Vlasništvo i Upravljanje</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      {!isMissing(currentCompany.owner) && (
+                        <motion.div variants={itemVariants}>
+                          <h4 className="text-sm font-bold uppercase tracking-widest text-gray-500 mb-3">Vlasnik</h4>
+                          <p className="text-base font-semibold text-gray-900">{displayValue(currentCompany.owner)}</p>
+                        </motion.div>
+                      )}
+                      {currentCompany.directors && currentCompany.directors.length > 0 && (
+                        <motion.div variants={itemVariants}>
+                          <h4 className="text-sm font-bold uppercase tracking-widest text-gray-500 mb-3">Direktori</h4>
+                          <ul className="space-y-2">
+                            {currentCompany.directors.map((director, idx) => (
+                              <li key={idx} className="text-base font-medium text-gray-900 flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-blue-500"></span>
                                 {director}
-                            </motion.li>
-                         ))}
-                       </ul>
-                    </motion.div>
-                  </div>
-                </motion.section>
+                              </li>
+                            ))}
+                          </ul>
+                        </motion.div>
+                      )}
+                    </div>
+                  </motion.section>
+                )}
+
+                {/* Financial Summary */}
+                {currentCompany.financials && currentCompany.financials.length > 0 && (
+                  <motion.section 
+                    variants={slideUpVariants}
+                    className="space-y-4"
+                  >
+                    <div>
+                      <h2 className="text-2xl font-bold text-gray-900 mb-1">Financijski Sažetak</h2>
+                      <p className="text-gray-500 text-sm">Financijski pokazatelji po godinama</p>
+                    </div>
+                    <div className="grid grid-cols-1 gap-4">
+                      {currentCompany.financials.map((fin) => (
+                        <motion.div 
+                          key={fin.year}
+                          variants={itemVariants}
+                          className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm"
+                        >
+                          <h3 className="text-sm font-bold uppercase tracking-widest text-gray-500 mb-6 pb-4 border-b border-gray-100">Godina {fin.year}</h3>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div>
+                              <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Prihodi</span>
+                              <p className="text-lg font-bold text-gray-900 mt-2">{formatCurrency(fin.income)}</p>
+                            </div>
+                            <div>
+                              <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Rashodi</span>
+                              <p className="text-lg font-bold text-gray-900 mt-2">{formatCurrency(fin.expenses)}</p>
+                            </div>
+                            <div>
+                              <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Rezultat</span>
+                              <p className="text-lg font-bold mt-2" style={{ color: getProfitColor(fin.profit) }}>
+                                {formatCurrency(fin.profit)}
+                              </p>
+                            </div>
+                            <div>
+                              <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Zaposlenici</span>
+                              <p className="text-lg font-bold text-gray-900 mt-2">{fin.employees}</p>
+                            </div>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </motion.section>
+                )}
+
+                {/* Bank Accounts */}
+                {currentCompany.bankAccounts && currentCompany.bankAccounts.length > 0 && (
+                  <motion.section 
+                    variants={slideUpVariants}
+                    className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-gray-100"
+                  >
+                    <h3 className="text-2xl font-bold mb-6 text-gray-900">Bankovni Računi</h3>
+                    <div className="space-y-4">
+                      {currentCompany.bankAccounts.map((account, idx) => (
+                        <motion.div key={idx} variants={itemVariants} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                          <p className="text-sm font-bold text-gray-900 mb-2">{account.iban}</p>
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                            <div>
+                              <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Banka</span>
+                              <p className="font-medium text-gray-900 mt-1">{account.bank}</p>
+                            </div>
+                            <div>
+                              <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Otvoreno</span>
+                              <p className="font-medium text-gray-900 mt-1">{account.opened}</p>
+                            </div>
+                            <div>
+                              <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Status</span>
+                              <p className={`font-medium mt-1 ${account.status.toLowerCase() === 'aktivan' ? 'text-green-600' : 'text-red-600'}`}>{account.status}</p>
+                            </div>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </motion.section>
+                )}
+
+                {/* Additional Info */}
+                {(!isMissing(currentCompany.taxDebt) || !isMissing(currentCompany.realEstate)) && (
+                  <motion.section 
+                    variants={slideUpVariants}
+                    className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-gray-100"
+                  >
+                    <h3 className="text-2xl font-bold mb-6 text-gray-900">Dodatne Informacije</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {!isMissing(currentCompany.taxDebt) && (
+                        <motion.div variants={itemVariants} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                          <span className="text-xs font-black uppercase tracking-widest text-gray-400">Porezni Dug</span>
+                          <p className="text-base font-semibold text-gray-900 mt-2">{displayValue(currentCompany.taxDebt)}</p>
+                        </motion.div>
+                      )}
+                      {!isMissing(currentCompany.realEstate) && (
+                        <motion.div variants={itemVariants} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                          <span className="text-xs font-black uppercase tracking-widest text-gray-400">Nekretnine</span>
+                          <p className="text-base font-semibold text-gray-900 mt-2">{displayValue(currentCompany.realEstate)}</p>
+                        </motion.div>
+                      )}
+                    </div>
+                  </motion.section>
+                )}
 
                 <motion.section 
                   variants={slideUpVariants}

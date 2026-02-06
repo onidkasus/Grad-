@@ -1,20 +1,3 @@
-// Update user profile in Firestore
-export const updateUser = async (userId: string, updates: Partial<User>) => {
-  try {
-    const userRef = doc(db, "users", userId);
-    await updateDoc(userRef, updates);
-    // Optionally update localStorage if needed
-    const current = localStorage.getItem('grad_plus_user_data');
-    if (current) {
-      const parsed = JSON.parse(current);
-      localStorage.setItem('grad_plus_user_data', JSON.stringify({ ...parsed, ...updates }));
-    }
-    return true;
-  } catch (e) {
-    console.error('Error updating user:', e);
-    throw e;
-  }
-};
 import { User, Idea, Challenge, Poll, Notification, UserRole, IncubatorStage, Category, Post, Badge, PostComment, CityEvent } from '../types';
 import { BADGES } from '../constants';
 import { db } from './firebase';
@@ -25,6 +8,7 @@ import {
   where, 
   getDocs, 
   addDoc, 
+  getDoc,
   updateDoc, 
   doc, 
   increment, 
@@ -425,7 +409,7 @@ export const challengesAPI = {
 
 
 export const pollsAPI = {
-  getAll: async (cityId?: string): Promise<Poll[]> => {
+  getAll: async (cityId?: string, userId?: string): Promise<Poll[]> => {
     try {
        const ref = collection(db, "polls");
        let q = ref as any;
@@ -435,18 +419,135 @@ export const pollsAPI = {
        const snapshot = await getDocs(q);
        return snapshot.docs.map(doc => {
          const data: any = doc.data();
+         if (data.isDeleted) return null;
+         const endsAtDate = data.endsAt?.toDate ? data.endsAt.toDate() : (data.endsAt ? new Date(data.endsAt) : null);
+         const now = new Date();
+         const isClosed = data.isClosed === true || (endsAtDate ? endsAtDate.getTime() <= now.getTime() : false);
+         let endsIn = data.endsIn || "Aktivno";
+         if (endsAtDate) {
+           if (isClosed) {
+             endsIn = "Zatvoreno";
+           } else {
+             const diffMs = endsAtDate.getTime() - now.getTime();
+             const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+             const hours = Math.floor(diffMs / (1000 * 60 * 60));
+             endsIn = days >= 1 ? `Preostalo ${days}d` : `Preostalo ${Math.max(hours, 1)}h`;
+           }
+         }
          return {
            id: doc.id,
            cityId: getCityString(data.cityID || 1),
            question: data.question || "",
            options: data.options || [],
            totalVotes: data.totalVotes || 0,
-           endsIn: data.endsIn || "Uskoro"
+           userVotedOptionId: userId ? data.voterMap?.[userId] || null : null,
+           endsIn,
+           endsAt: endsAtDate ? endsAtDate.toISOString() : undefined,
+           isClosed
          } as Poll;
-       });
+       }).filter(Boolean) as Poll[];
     } catch (e) {
       console.error("Error fetching polls:", e);
       return [];
+    }
+  }
+  ,
+  create: async (poll: { question: string; options: string[]; cityId: string; endsInDays?: number | null }, user: User): Promise<Poll> => {
+    try {
+      const optionItems = poll.options.map((text, index) => ({
+        id: `opt-${Date.now()}-${index}`,
+        text,
+        votes: 0
+      }));
+      const endsAt = typeof poll.endsInDays === 'number'
+        ? Timestamp.fromDate(new Date(Date.now() + poll.endsInDays * 24 * 60 * 60 * 1000))
+        : null;
+      const data = {
+        cityID: getCityNumber(poll.cityId),
+        question: poll.question,
+        options: optionItems,
+        totalVotes: 0,
+        endsIn: poll.endsInDays ? `Preostalo ${poll.endsInDays}d` : 'Aktivno',
+        endsAt,
+        createdBy: user.id,
+        createdAt: serverTimestamp(),
+        voterMap: {}
+      };
+      const docRef = await addDoc(collection(db, "polls"), data);
+      return {
+        id: docRef.id,
+        cityId: poll.cityId,
+        question: poll.question,
+        options: optionItems,
+        totalVotes: 0,
+        endsIn: data.endsIn,
+        endsAt: endsAt ? endsAt.toDate().toISOString() : undefined,
+        isClosed: false
+      } as Poll;
+    } catch (e) {
+      console.error("Error creating poll:", e);
+      throw e;
+    }
+  },
+  vote: async (pollId: string, optionId: string, userId: string): Promise<Poll | null> => {
+    try {
+      const pollRef = doc(db, "polls", pollId);
+      const snap = await getDoc(pollRef);
+      if (!snap.exists()) return null;
+
+      const data: any = snap.data();
+      const endsAtDate = data.endsAt?.toDate ? data.endsAt.toDate() : (data.endsAt ? new Date(data.endsAt) : null);
+      if (data.isClosed === true) return null;
+      if (endsAtDate && endsAtDate.getTime() <= Date.now()) return null;
+      if (data.voterMap && data.voterMap[userId]) return null;
+
+      const options = (data.options || []).map((opt: any) =>
+        opt.id === optionId ? { ...opt, votes: (opt.votes || 0) + 1 } : opt
+      );
+      const totalVotes = (data.totalVotes || 0) + 1;
+
+      await updateDoc(pollRef, {
+        options,
+        totalVotes,
+        [`voterMap.${userId}`]: optionId
+      });
+
+      const isClosed = data.isClosed === true || (endsAtDate ? endsAtDate.getTime() <= Date.now() : false);
+      return {
+        id: pollId,
+        cityId: getCityString(data.cityID || 1),
+        question: data.question || "",
+        options,
+        totalVotes,
+        userVotedOptionId: optionId,
+        endsIn: data.endsIn || 'Aktivno',
+        endsAt: endsAtDate ? endsAtDate.toISOString() : undefined,
+        isClosed
+      } as Poll;
+    } catch (e) {
+      console.error("Error voting on poll:", e);
+      throw e;
+    }
+  },
+  setClosed: async (pollId: string, closed: boolean): Promise<void> => {
+    try {
+      const pollRef = doc(db, "polls", pollId);
+      await updateDoc(pollRef, {
+        isClosed: closed,
+        closedAt: closed ? serverTimestamp() : null
+      });
+    } catch (e) {
+      console.error("Error updating poll closed state:", e);
+      throw e;
+    }
+  },
+  remove: async (pollId: string): Promise<void> => {
+    try {
+      const pollRef = doc(db, "polls", pollId);
+      await updateDoc(pollRef, { isDeleted: true, deletedAt: serverTimestamp() });
+    } catch (e) {
+      console.error("Error deleting poll:", e);
+      throw e;
     }
   }
 };
@@ -530,6 +631,47 @@ export const communityAPI = {
        };
      } catch (e) {
        console.error("Error creating post:", e);
+       throw e;
+     }
+  },
+  createOfficialPost: async (content: string, cityId: string): Promise<Post> => {
+     try {
+       const postsRef = collection(db, "posts");
+       const lastPostQuery = query(postsRef, orderBy("postNo", "desc"), limit(1));
+       const lastSnapshot = await getDocs(lastPostQuery);
+       let nextPostNo = 1;
+       if (!lastSnapshot.empty) {
+         nextPostNo = (lastSnapshot.docs[0].data().postNo || 0) + 1;
+       }
+
+       const postData = {
+         content,
+         authorOIB: '00000000000',
+         authorName: 'Gradska Uprava',
+         authorAvatar: '🏛️',
+         cityID: getCityNumber(cityId),
+         postNo: nextPostNo,
+         likes: 0,
+         commentsCount: 0,
+         createdAt: serverTimestamp()
+       };
+       const docRef = await addDoc(collection(db, "posts"), postData);
+       return {
+         id: docRef.id,
+         postNo: nextPostNo,
+         authorOIB: postData.authorOIB,
+         cityID: postData.cityID,
+         authorName: postData.authorName,
+         authorAvatar: postData.authorAvatar,
+         content,
+         likes: 0,
+         comments: 0,
+         created_at: new Date().toISOString(),
+         time: "Upravo sad",
+         likedByCurrentUser: false
+       } as Post;
+     } catch (e) {
+       console.error("Error creating official post:", e);
        throw e;
      }
   },

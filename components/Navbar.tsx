@@ -13,6 +13,7 @@ interface NavbarProps {
   notifications: Notification[];
   onClearNotifications: () => void;
   onSearch: (query: string) => void;
+  onNavigate: (tab: string) => void;
   onToggleTheme: () => void;
   onOpenAI: () => void;
   onOpenAccessibility: () => void;
@@ -21,7 +22,7 @@ interface NavbarProps {
 
 const Navbar: React.FC<NavbarProps> = ({ 
   user, selectedCity, onCityChange, onLogout, notifications, onClearNotifications,
-  onSearch, onToggleTheme, onOpenAI, onOpenAccessibility, currentTheme
+  onSearch, onNavigate, onToggleTheme, onOpenAI, onOpenAccessibility, currentTheme
 }) => {
   // Helper: compute readable text color for a foreground on a background
   const hexToRgb = (hex: string) => {
@@ -62,6 +63,8 @@ const Navbar: React.FC<NavbarProps> = ({
   const [showCityPicker, setShowCityPicker] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [availableCities, setAvailableCities] = useState<CityConfig[]>(CITIES);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showSearchResults, setShowSearchResults] = useState(false);
   const spring = { type: "spring", stiffness: 400, damping: 40 } as const;
 
   useEffect(() => {
@@ -78,6 +81,21 @@ const Navbar: React.FC<NavbarProps> = ({
   }, []);
 
   const unreadCount = notifications.filter(n => !n.read).length;
+  const commands = [
+    { id: 'dashboard', label: 'Pregled Grada', icon: 'dashboard' },
+    { id: 'vault', label: 'Digitalni Sef', icon: 'lock' },
+    { id: 'fiscal', label: 'Gradski Kalendar', icon: 'calendar_month' },
+    { id: 'inspection', label: 'Inspekcija Tvrtki', icon: 'manage_search' },
+    { id: 'challenges', label: 'Gradski Izazovi', icon: 'location_city' },
+    { id: 'incubator', label: 'Inkubator Ideja', icon: 'psychology' },
+    { id: 'community', label: 'Zajednica', icon: 'forum' },
+    { id: 'factcheck', label: 'AI Provjera', icon: 'fact_check' },
+    { id: 'account', label: 'Moj Profil', icon: 'account_circle' },
+    ...(user.role === UserRole.ADMIN ? [{ id: 'admin', label: 'Admin Portal', icon: 'admin_panel_settings' }] : [])
+  ];
+  const filteredCommands = commands.filter(cmd =>
+    cmd.label.toLowerCase().includes(searchTerm.trim().toLowerCase())
+  );
 
   return (
     <header 
@@ -171,7 +189,24 @@ const Navbar: React.FC<NavbarProps> = ({
         <div className="relative hidden xl:block">
            <span className="material-icons-round absolute left-5 top-1/2 -translate-y-1/2 text-gray-300">search</span>
            <input 
-             onChange={(e) => onSearch(e.target.value)}
+             value={searchTerm}
+             onFocus={() => setShowSearchResults(true)}
+             onBlur={() => setTimeout(() => setShowSearchResults(false), 150)}
+             onChange={(e) => {
+               setSearchTerm(e.target.value);
+               onSearch(e.target.value);
+             }}
+             onKeyDown={(e) => {
+               if (e.key === 'Enter' && filteredCommands.length > 0) {
+                 onNavigate(filteredCommands[0].id);
+                 setShowSearchResults(false);
+                 setSearchTerm('');
+                 onSearch('');
+               }
+               if (e.key === 'Escape') {
+                 setShowSearchResults(false);
+               }
+             }}
              placeholder="Traži gradske resurse..."
              className={`pl-14 pr-8 py-4 rounded-2xl border text-[10px] transition-all w-64 focus:w-80 outline-none font-black uppercase tracking-widest ${
                currentTheme === 'light'
@@ -179,6 +214,42 @@ const Navbar: React.FC<NavbarProps> = ({
                : 'bg-white/5 border-transparent focus:bg-white/10 focus:border-white/10'
              }`}
            />
+           <AnimatePresence>
+             {showSearchResults && searchTerm.trim().length > 0 && (
+               <motion.div
+                 initial={{ opacity: 0, y: 8 }}
+                 animate={{ opacity: 1, y: 0 }}
+                 exit={{ opacity: 0, y: 8 }}
+                 className={`absolute top-14 left-0 w-[360px] rounded-2xl shadow-2xl border p-2 z-[200] ${
+                   currentTheme === 'light' ? 'bg-white border-gray-100' : 'bg-gray-900 border-white/10'
+                 }`}
+               >
+                 {filteredCommands.length === 0 ? (
+                   <div className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-gray-400">
+                     Nema rezultata
+                   </div>
+                 ) : (
+                   filteredCommands.slice(0, 6).map(cmd => (
+                     <button
+                       key={cmd.id}
+                       onMouseDown={() => {
+                         onNavigate(cmd.id);
+                         setShowSearchResults(false);
+                         setSearchTerm('');
+                         onSearch('');
+                       }}
+                       className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-50 dark:hover:bg-white/5 transition-all text-left"
+                     >
+                       <span className="material-icons-round text-gray-400 text-lg">{cmd.icon}</span>
+                       <span className="text-[11px] font-black uppercase tracking-widest">
+                         {cmd.label}
+                       </span>
+                     </button>
+                   ))
+                 )}
+               </motion.div>
+             )}
+           </AnimatePresence>
         </div>
       </div>
 

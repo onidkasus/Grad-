@@ -165,7 +165,7 @@ const IdeaIncubator: React.FC<IdeaIncubatorProps> = ({ ideas, setIdeas, isReadOn
                           )}
                         </div>
                         
-                        <h4 className="font-extrabold text-gray-900 mb-3 leading-tight text-lg group-hover:text-blue-600 transition-colors" style={{ color: !isReadOnly ? 'inherit' : city.theme.primary }}>
+                        <h4 className="font-extrabold text-gray-900 mb-3 leading-tight text-lg group-hover:text-gray-900 transition-colors">
                           {idea.title}
                         </h4>
                         

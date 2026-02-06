@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Idea, CityConfig, Category, IncubatorStage, Poll, User, Post, PostComment } from '../types';
+import { Idea, CityConfig, Category, IncubatorStage, Poll, User, Post, PostComment, UserRole } from '../types';
 import { communityAPI, ideasAPI } from '../services/api';
 
 interface CommunityProps {
@@ -14,7 +14,8 @@ interface CommunityProps {
 }
 
 const Community: React.FC<CommunityProps> = ({ ideas, setIdeas, city, polls, onVote, user, showToast }) => {
-  const [viewMode, setViewMode] = useState<'IDEAS' | 'POSTS'>('IDEAS');
+  const isAdmin = user.role === UserRole.ADMIN;
+  const [viewMode, setViewMode] = useState<'IDEAS' | 'POSTS'>(isAdmin ? 'POSTS' : 'IDEAS');
   
   // POSTS STATE
   const [posts, setPosts] = useState<Post[]>([]);
@@ -33,6 +34,7 @@ const Community: React.FC<CommunityProps> = ({ ideas, setIdeas, city, polls, onV
   const [filter, setFilter] = useState('Sve');
   const [activeCommentId, setActiveCommentId] = useState<string | null>(null); // storing id of post/idea being commented on
   const [commentText, setCommentText] = useState('');
+  const [showAiReasoningId, setShowAiReasoningId] = useState<string | null>(null);
   
   // Track which ideas and posts the user has liked
   const [likedIdeas, setLikedIdeas] = useState<Set<string>>(new Set());
@@ -66,6 +68,10 @@ const Community: React.FC<CommunityProps> = ({ ideas, setIdeas, city, polls, onV
   };
 
   const handleCreateIdea = async () => {
+    if (isAdmin) {
+      showToast('Administratori ne mogu slati vlastite ideje.', 'info');
+      return;
+    }
     if (!newIdeaTitle.trim() || !newIdeaDesc.trim()) return;
     
     try {
@@ -91,7 +97,9 @@ const Community: React.FC<CommunityProps> = ({ ideas, setIdeas, city, polls, onV
   const handleCreatePost = async () => {
     if (!newPostContent.trim()) return;
     // FIXED: communityAPI.createPost expects content: string, not an object
-    const p = await communityAPI.createPost(newPostContent, user);
+    const p = isAdmin
+      ? await communityAPI.createOfficialPost(newPostContent, city.id)
+      : await communityAPI.createPost(newPostContent, user);
     setPosts(prev => [p, ...prev]);
     setNewPostContent('');
     setIsPosting(false);
@@ -237,7 +245,13 @@ const Community: React.FC<CommunityProps> = ({ ideas, setIdeas, city, polls, onV
                    {user.avatar}
                  </div>
                  <button 
-                   onClick={() => setIsPosting(true)}
+                   onClick={() => {
+                     if (isAdmin && viewMode === 'IDEAS') {
+                       showToast('Administratori ne mogu slati vlastite ideje.', 'info');
+                       return;
+                     }
+                     setIsPosting(true);
+                   }}
                    className="flex-1 text-left px-8 py-4 bg-gray-50 hover:bg-gray-100 rounded-[2rem] text-gray-400 font-bold transition-all border border-transparent hover:border-gray-200"
                  >
                    {viewMode === 'IDEAS' ? `Predložite projekt za ${city.name}...` : 'Započnite raspravu...'}
@@ -298,14 +312,15 @@ const Community: React.FC<CommunityProps> = ({ ideas, setIdeas, city, polls, onV
                   />
                 )}
 
-                <div className="flex justify-between items-center pt-4">
+                 <div className="flex justify-between items-center pt-4">
                    <div className="flex gap-2">
                       <button className="w-12 h-12 rounded-xl bg-gray-50 text-gray-400 hover:bg-white hover:shadow-lg transition-all flex items-center justify-center border border-gray-100">
                          <span className="material-icons-round">image</span>
                       </button>
                    </div>
                    <button 
-                     onClick={viewMode === 'IDEAS' ? handleCreateIdea : handleCreatePost}
+                    onClick={viewMode === 'IDEAS' ? handleCreateIdea : handleCreatePost}
+                    disabled={isAdmin && viewMode === 'IDEAS'}
                      className="px-10 py-4 bg-gray-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all"
                      style={{ backgroundColor: city.theme.primary }}
                    >
@@ -370,14 +385,35 @@ const Community: React.FC<CommunityProps> = ({ ideas, setIdeas, city, polls, onV
                   </div>
                   <div className="flex flex-col items-end gap-2">
                       {idea.aiRating !== undefined && (
-                        <div className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest flex items-center gap-1.5 border
-                              ${idea.aiRating >= 80 ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                                idea.aiRating >= 50 ? 'bg-amber-50 text-amber-600 border-amber-100' :
-                                'bg-gray-50 text-gray-500 border-gray-100'
+                        <div className="flex flex-col items-end gap-2">
+                          <button
+                            onClick={() => setShowAiReasoningId(showAiReasoningId === idea.id ? null : idea.id)}
+                            className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest flex items-center gap-1.5 border transition-all
+                              ${idea.aiRating >= 80 ? 'bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100' :
+                                idea.aiRating >= 50 ? 'bg-amber-50 text-amber-600 border-amber-100 hover:bg-amber-100' :
+                                'bg-gray-50 text-gray-500 border-gray-100 hover:bg-gray-100'
                               }
-                        `}>
-                          <span className="material-icons-round text-xs">auto_awesome</span>
-                          AI Ocjena: {idea.aiRating}/100
+                            `}
+                            type="button"
+                          >
+                            <span className="material-icons-round text-xs">auto_awesome</span>
+                            AI Ocjena: {idea.aiRating}/100
+                            <span className="material-icons-round text-xs">
+                              {showAiReasoningId === idea.id ? 'expand_less' : 'info'}
+                            </span>
+                          </button>
+                          <AnimatePresence>
+                            {showAiReasoningId === idea.id && (
+                              <motion.div
+                                initial={{ opacity: 0, y: -6, height: 0 }}
+                                animate={{ opacity: 1, y: 0, height: 'auto' }}
+                                exit={{ opacity: 0, y: -6, height: 0 }}
+                                className="text-[10px] text-gray-600 font-medium leading-relaxed bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 max-w-[260px]"
+                              >
+                                {idea.aiReasoning?.trim() || 'AI objašnjenje nije dostupno za ovu ideju.'}
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
                         </div>
                       )}
                       {idea.isVerified && (
@@ -611,26 +647,38 @@ const Community: React.FC<CommunityProps> = ({ ideas, setIdeas, city, polls, onV
         {polls.map(poll => (
           <div key={poll.id} className="bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-sm overflow-hidden relative">
             <div className="relative z-10">
-              <h4 className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-2">Anketa Tjedna</h4>
-              <h3 className="text-xl font-black text-gray-900 mb-8 leading-tight tracking-tight">{poll.question}</h3>
+              <div className="flex items-start justify-between gap-4 mb-4">
+                <div>
+                  <h4 className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-2">Anketa</h4>
+                  <h3 className="text-xl font-black text-gray-900 leading-tight tracking-tight">{poll.question}</h3>
+                  {poll.endsIn && (
+                    <p className={`text-[10px] font-black uppercase tracking-widest mt-2 ${poll.isClosed ? 'text-red-600' : 'text-gray-400'}`}>
+                      {poll.isClosed ? 'Zatvoreno' : poll.endsIn}
+                    </p>
+                  )}
+                </div>
+              </div>
               <div className="space-y-4">
                 {poll.options.map(option => {
                   const percent = poll.totalVotes > 0 ? Math.round((option.votes / poll.totalVotes) * 100) : 0;
                   const isSelected = poll.userVotedOptionId === option.id;
+                  const showResults = !!poll.userVotedOptionId || !!poll.isClosed;
                   return (
                     <button 
                       key={option.id}
                       onClick={() => onVote(poll.id, option.id)}
-                      disabled={!!poll.userVotedOptionId}
-                      className={`w-full p-5 rounded-2xl border transition-all text-left relative overflow-hidden ${isSelected ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-transparent hover:bg-blue-50'}`}
+                      disabled={!!poll.userVotedOptionId || !!poll.isClosed || isAdmin}
+                      className={`w-full p-5 rounded-2xl border transition-all text-left relative overflow-hidden ${isSelected ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-transparent hover:bg-blue-50'} ${poll.isClosed || isAdmin ? 'opacity-80 cursor-not-allowed' : ''}`}
                     >
                       <div className="flex justify-between items-center relative z-10">
                         <span className={`text-xs font-black uppercase tracking-widest ${isSelected ? 'text-blue-700' : 'text-gray-900'}`}>
                           {option.text}
                         </span>
-                        <span className="text-[10px] font-black text-gray-500">{poll.userVotedOptionId ? `${percent}%` : ''}</span>
+                        <span className="text-[10px] font-black text-gray-500">
+                          {showResults ? `${percent}%` : ''}
+                        </span>
                       </div>
-                      {poll.userVotedOptionId && (
+                      {showResults && (
                         <div className="absolute left-0 top-0 bottom-0 bg-gray-200/20" style={{ width: `${percent}%` }}></div>
                       )}
                     </button>

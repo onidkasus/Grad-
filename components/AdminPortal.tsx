@@ -12,7 +12,7 @@ function formatDate(dateStr: string | Date | undefined): string {
   return `${day}/${month}/${year}`;
 }
 import { motion, AnimatePresence } from 'framer-motion';
-import { Idea, Challenge, CityConfig, Category, IncubatorStage, Post, DocumentRequest } from '../types';
+import { Idea, Challenge, CityConfig, Category, IncubatorStage, Post, DocumentRequest, Poll } from '../types';
 import { CITIES } from '../constants';
 import { ideasAPI, challengesAPI, communityAPI, getCityNumber } from '../services/api';
 
@@ -23,6 +23,10 @@ interface AdminPortalProps {
   setChallenges: React.Dispatch<React.SetStateAction<Challenge[]>>;
   posts: Post[];
   setPosts: React.Dispatch<React.SetStateAction<Post[]>>;
+  polls: Poll[];
+  onCreatePoll: (question: string, options: string[], endsInDays?: number | null) => void;
+  onDeletePoll: (pollId: string) => void;
+  onSetPollClosed: (pollId: string, closed: boolean) => void;
   documentRequests?: DocumentRequest[];
   setDocumentRequests?: React.Dispatch<React.SetStateAction<DocumentRequest[]>>;
   city: CityConfig;
@@ -30,8 +34,8 @@ interface AdminPortalProps {
   showToast: (msg: string, type?: 'success' | 'info') => void;
 }
 
-const AdminPortal: React.FC<AdminPortalProps> = ({ ideas, setIdeas, challenges, setChallenges, posts, setPosts, documentRequests = [], setDocumentRequests, city, setCity, showToast }) => {
-  const [activeTab, setActiveTab] = useState<'submissions' | 'challenges' | 'incubator' | 'posts' | 'documents'>('submissions');
+const AdminPortal: React.FC<AdminPortalProps> = ({ ideas, setIdeas, challenges, setChallenges, posts, setPosts, polls, onCreatePoll, onDeletePoll, onSetPollClosed, documentRequests = [], setDocumentRequests, city, setCity, showToast }) => {
+  const [activeTab, setActiveTab] = useState<'submissions' | 'challenges' | 'incubator' | 'posts' | 'documents' | 'polls'>('submissions');
   const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(null);
   const [adminContext, setAdminContext] = useState<string>(city.id); // Default to user city
   const [showCityPicker, setShowCityPicker] = useState(false);
@@ -49,6 +53,9 @@ const AdminPortal: React.FC<AdminPortalProps> = ({ ideas, setIdeas, challenges, 
       content: '',
       title: ''
   });
+  const [pollQuestion, setPollQuestion] = useState('');
+  const [pollOptions, setPollOptions] = useState<string[]>(['', '']);
+  const [pollEndsInDays, setPollEndsInDays] = useState<number | null>(7);
 
   const getChallengeIcon = (category: Category): string => {
     switch(category) {
@@ -91,19 +98,7 @@ const AdminPortal: React.FC<AdminPortalProps> = ({ ideas, setIdeas, challenges, 
   const handleCreatePost = async () => {
     if (!newPost.content) return;
     try {
-      const post: Post = {
-        id: 'POST-' + Date.now(),
-        postNo: Date.now(),
-        content: newPost.content,
-        authorName: 'Gradska Uprava',
-        authorAvatar: '🏛️',
-        authorOIB: '00000000000',
-        time: new Date().toLocaleString('hr-HR'),
-        created_at: new Date().toISOString(),
-        cityID: getCityNumber(adminContext),
-        likes: 0,
-        comments: 0
-      };
+      const post = await communityAPI.createOfficialPost(newPost.content, adminContext);
       setPosts(prev => [post, ...prev]);
       setShowPostModal(false);
       setNewPost({ content: '', title: '' });
@@ -111,6 +106,18 @@ const AdminPortal: React.FC<AdminPortalProps> = ({ ideas, setIdeas, challenges, 
     } catch(e) {
       showToast('Greška kod objavljivanja.', 'info');
     }
+  };
+
+  const submitPoll = () => {
+    const trimmedQuestion = pollQuestion.trim();
+    const cleanedOptions = pollOptions.map(o => o.trim()).filter(Boolean);
+    if (!trimmedQuestion || cleanedOptions.length < 2) {
+      showToast('Unesite pitanje i barem dvije opcije.', 'info');
+      return;
+    }
+    onCreatePoll(trimmedQuestion, cleanedOptions, pollEndsInDays);
+    setPollQuestion('');
+    setPollOptions(['', '']);
   };
 
 
@@ -360,7 +367,8 @@ const AdminPortal: React.FC<AdminPortalProps> = ({ ideas, setIdeas, challenges, 
           { id: 'challenges', label: 'Gradski Izazovi', icon: 'location_city' },
           { id: 'documents', label: `Digitalni Sef (${documentRequests.length})`, icon: 'description' },
           { id: 'posts', label: `Moderacija Objava (${posts.filter(p => p.cityID === getCityNumber(adminContext)).length})`, icon: 'forum' },
-          { id: 'incubator', label: 'Inkubator', icon: 'grid_view' }
+          { id: 'incubator', label: 'Inkubator', icon: 'grid_view' },
+          { id: 'polls', label: `Ankete (${polls.filter(p => p.cityId === adminContext).length})`, icon: 'poll' }
         ].map(tab => (
           <button 
             key={tab.id}
@@ -687,6 +695,148 @@ const AdminPortal: React.FC<AdminPortalProps> = ({ ideas, setIdeas, challenges, 
                 </div>
               );
             })}
+          </motion.div>
+        )}
+
+        {activeTab === 'polls' && (
+          <motion.div
+            key="polls"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={spring}
+            className="space-y-6"
+          >
+            <div className="bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-sm">
+              <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">Ankete</h4>
+              <h3 className="text-xl font-black text-gray-900 mb-6 tracking-tight">Kreiraj novu anketu</h3>
+              <div className="space-y-4">
+                <input
+                  value={pollQuestion}
+                  onChange={(e) => setPollQuestion(e.target.value)}
+                  placeholder="Pitanje ankete"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-all text-sm text-gray-900"
+                />
+                <div className="flex items-center gap-3">
+                  <label className="text-xs font-black uppercase tracking-widest text-gray-400">Trajanje</label>
+                  <select
+                    value={pollEndsInDays === null ? 'none' : String(pollEndsInDays)}
+                    onChange={(e) => setPollEndsInDays(e.target.value === 'none' ? null : Number(e.target.value))}
+                    className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold uppercase tracking-widest text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500"
+                  >
+                    <option value="1">1 dan</option>
+                    <option value="3">3 dana</option>
+                    <option value="7">7 dana</option>
+                    <option value="14">14 dana</option>
+                    <option value="30">30 dana</option>
+                    <option value="none">Bez roka</option>
+                  </select>
+                </div>
+                <div className="space-y-3">
+                  {pollOptions.map((opt, idx) => (
+                    <div key={`poll-opt-${idx}`} className="flex gap-2">
+                      <input
+                        value={opt}
+                        onChange={(e) => {
+                          const next = [...pollOptions];
+                          next[idx] = e.target.value;
+                          setPollOptions(next);
+                        }}
+                        placeholder={`Opcija ${idx + 1}`}
+                        className="flex-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-all text-sm text-gray-900"
+                      />
+                      {pollOptions.length > 2 && (
+                        <button
+                          onClick={() => setPollOptions(pollOptions.filter((_, i) => i !== idx))}
+                          className="w-10 h-10 rounded-xl bg-gray-100 text-gray-500 hover:text-red-600 hover:bg-red-50 transition-all"
+                          type="button"
+                        >
+                          <span className="material-icons-round text-sm">close</span>
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setPollOptions(prev => [...prev, ''])}
+                    className="px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold text-xs uppercase tracking-wider transition-all"
+                    type="button"
+                  >
+                    Dodaj opciju
+                  </button>
+                  <button
+                    onClick={submitPoll}
+                    className="px-5 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all shadow-md"
+                    type="button"
+                  >
+                    Objavi anketu
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {polls.filter(p => p.cityId === adminContext).length === 0 ? (
+              <div className="py-32 text-center bg-white rounded-[4rem] border border-gray-100 flex flex-col items-center justify-center shadow-sm">
+                <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center mb-6 text-gray-200 shadow-inner">
+                  <span className="material-icons-round text-5xl">poll</span>
+                </div>
+                <p className="text-xs font-black text-gray-300 uppercase tracking-[0.5em]">Nema anketa</p>
+              </div>
+            ) : (
+              polls.filter(p => p.cityId === adminContext).map(poll => (
+                <div key={poll.id} className="bg-white rounded-[3rem] p-10 border border-gray-100 shadow-sm">
+                  <div className="flex items-start justify-between gap-4 mb-6">
+                    <div>
+                      <h4 className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-2">Anketa</h4>
+                      <h3 className="text-2xl font-black text-gray-900 leading-tight tracking-tight">{poll.question}</h3>
+                      <p className={`text-[10px] font-black uppercase tracking-widest mt-2 ${poll.isClosed ? 'text-red-600' : 'text-gray-400'}`}>
+                        {poll.isClosed ? 'Zatvoreno' : poll.endsIn || 'Aktivno'}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => onSetPollClosed(poll.id, !poll.isClosed)}
+                        className={`w-10 h-10 rounded-xl transition-all ${poll.isClosed ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100' : 'bg-amber-50 text-amber-700 hover:bg-amber-100'}`}
+                        title={poll.isClosed ? 'Ponovno otvori anketu' : 'Zatvori anketu'}
+                        type="button"
+                      >
+                        <span className="material-icons-round text-sm">{poll.isClosed ? 'lock_open' : 'lock'}</span>
+                      </button>
+                      <button
+                        onClick={() => onDeletePoll(poll.id)}
+                        className="w-10 h-10 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition-all"
+                        title="Obriši anketu"
+                        type="button"
+                      >
+                        <span className="material-icons-round text-sm">delete</span>
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-6">
+                    Ukupno glasova: {poll.totalVotes}
+                  </p>
+                  <div className="space-y-4">
+                    {poll.options.map(option => {
+                      const percent = poll.totalVotes > 0 ? Math.round((option.votes / poll.totalVotes) * 100) : 0;
+                      return (
+                        <div key={option.id} className="w-full p-5 rounded-2xl border bg-gray-50 border-transparent relative overflow-hidden">
+                          <div className="flex justify-between items-center relative z-10">
+                            <span className="text-xs font-black uppercase tracking-widest text-gray-900">
+                              {option.text}
+                            </span>
+                            <span className="text-[10px] font-black text-gray-500">
+                              {`${percent}% (${option.votes})`}
+                            </span>
+                          </div>
+                          <div className="absolute left-0 top-0 bottom-0 bg-gray-200/20" style={{ width: `${percent}%` }}></div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))
+            )}
           </motion.div>
         )}
       </AnimatePresence>

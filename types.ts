@@ -159,7 +159,9 @@ export interface Poll {
   options: { id: string; text: string; votes: number }[];
   totalVotes: number;
   userVotedOptionId?: string | null;
-  endsIn: string;
+  endsIn?: string;
+  endsAt?: string;
+  isClosed?: boolean;
 }
 
 export interface Transaction {
@@ -188,6 +190,13 @@ export interface CompanyData {
   owner: string;
   directors: string[];
   financials: { year: number; income: number; expenses: number; profit: number; employees: number }[];
+  description?: string;
+  phones?: string[];
+  bankAccounts?: { iban: string; opened: string; closed?: string; bank: string; status: string }[];
+  realEstate?: string;
+  taxDebt?: string;
+  inBlockade?: boolean;
+  averageSalary?: { year: number; salary: number }[];
 }
 
 export interface DigitalDocument {

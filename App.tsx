@@ -96,12 +96,12 @@ const App: React.FC = () => {
     else document.body.classList.remove('reduce-motion');
   }, [theme, a11y]);
 
-  const syncData = useCallback(async (cityId: string) => {
+  const syncData = useCallback(async (cityId: string, userId?: string) => {
     try {
       const [fetchedIdeas, fetchedChallenges, fetchedPolls] = await Promise.all([
         ideasAPI.getAll(cityId),
         challengesAPI.getAll(cityId),
-        pollsAPI.getAll(cityId)
+        pollsAPI.getAll(cityId, userId)
       ]);
       setIdeas(fetchedIdeas);
       setChallenges(fetchedChallenges);
@@ -119,7 +119,9 @@ const App: React.FC = () => {
         setIsAuthenticated(true);
         const city = CITIES.find(c => c.id === currentUser.cityId) || CITIES[0];
         setSelectedCity(city);
-        await syncData(city.id);
+        if (currentUser.role === UserRole.ADMIN) setActiveTab('admin');
+        else setActiveTab('dashboard');
+        await syncData(city.id, currentUser.id);
       }
       setIsLoading(false);
     };
@@ -152,7 +154,7 @@ const App: React.FC = () => {
       setSelectedCity(city);
       if (u.role === UserRole.ADMIN) setActiveTab('admin');
       else setActiveTab('dashboard');
-      await syncData(city.id);
+      await syncData(city.id, u.id);
     }
   };
 
@@ -164,7 +166,7 @@ const App: React.FC = () => {
     }
 
     setSelectedCity(city);
-    await syncData(city.id);
+    await syncData(city.id, user?.id);
     showToast(`Kontekst prebačen na regiju ${city.name}`, 'info');
   };
 
@@ -182,14 +184,6 @@ const App: React.FC = () => {
 
   const spring = { type: "spring", stiffness: 400, damping: 40 } as const;
 
-  if (isLoading) return (
-    <div className="h-screen w-full flex items-center justify-center bg-[#f5f5f7]">
-      <motion.div animate={{ rotate: 360, scale: [1, 1.1, 1] }} transition={{ repeat: Infinity, duration: 1 }} className="w-10 h-10 border-4 border-black border-t-transparent rounded-full shadow-2xl"></motion.div>
-    </div>
-  );
-
-  if (!isAuthenticated || !user) return <LoginScreen onLogin={handleLogin} />;
-
   const handleIdeasUpdate = (newIdeas: Idea[] | ((prev: Idea[]) => Idea[])) => {
     setIdeas(typeof newIdeas === 'function' ? (newIdeas as any)(ideas) : newIdeas);
   };
@@ -204,6 +198,77 @@ const App: React.FC = () => {
       showToast('Greška pri sinkronizaciji s poslužiteljem.', 'info');
     }
   };
+
+  const handleVotePoll = useCallback(async (pollId: string, optionId: string) => {
+    if (!user) return;
+    const currentPoll = polls.find(p => p.id === pollId);
+    if (currentPoll?.isClosed) {
+      showToast('Anketa je zatvorena.', 'info');
+      return;
+    }
+    if (currentPoll?.userVotedOptionId) {
+      showToast('Već ste glasali na ovoj anketi.', 'info');
+      return;
+    }
+    try {
+      const updated = await pollsAPI.vote(pollId, optionId, user.id);
+      if (updated) {
+        setPolls(prev => prev.map(p =>
+          p.id === pollId
+            ? { ...updated, userVotedOptionId: optionId }
+            : p
+        ));
+        showToast('Glas uspješan!', 'success');
+      } else {
+        showToast('Glas nije prihvaćen.', 'info');
+      }
+    } catch (e) {
+      showToast('Greška pri glasanju.', 'info');
+    }
+  }, [user, polls, showToast]);
+
+  const handleCreatePoll = useCallback(async (question: string, options: string[], endsInDays?: number | null) => {
+    if (!user) return;
+    try {
+      const created = await pollsAPI.create({ question, options, cityId: selectedCity.id, endsInDays }, user);
+      setPolls(prev => [created, ...prev]);
+      showToast('Anketa je kreirana.', 'success');
+    } catch (e) {
+      showToast('Greška pri kreiranju ankete.', 'info');
+    }
+  }, [user, selectedCity.id, showToast]);
+
+  const handleDeletePoll = useCallback(async (pollId: string) => {
+    try {
+      await pollsAPI.remove(pollId);
+      setPolls(prev => prev.filter(p => p.id !== pollId));
+      showToast('Anketa je obrisana.', 'success');
+    } catch (e) {
+      showToast('Greška pri brisanju ankete.', 'info');
+    }
+  }, [showToast]);
+
+  const handleSetPollClosed = useCallback(async (pollId: string, closed: boolean) => {
+    try {
+      await pollsAPI.setClosed(pollId, closed);
+      setPolls(prev => prev.map(p =>
+        p.id === pollId
+          ? { ...p, isClosed: closed, endsIn: closed ? 'Zatvoreno' : p.endsIn }
+          : p
+      ));
+      showToast(closed ? 'Anketa zatvorena.' : 'Anketa ponovno otvorena.', 'success');
+    } catch (e) {
+      showToast('Greška pri ažuriranju ankete.', 'info');
+    }
+  }, [showToast]);
+
+  if (isLoading) return (
+    <div className="h-screen w-full flex items-center justify-center bg-[#f5f5f7]">
+      <motion.div animate={{ rotate: 360, scale: [1, 1.1, 1] }} transition={{ repeat: Infinity, duration: 1 }} className="w-10 h-10 border-4 border-black border-t-transparent rounded-full shadow-2xl"></motion.div>
+    </div>
+  );
+
+  if (!isAuthenticated || !user) return <LoginScreen onLogin={handleLogin} />;
 
   return (
     <div className={`flex min-h-screen relative overflow-hidden selection:bg-blue-600 selection:text-white transition-colors duration-500 dark:text-gray-100 ${theme === 'dark' ? 'dark bg-[#0a0a0c]' : 'bg-[#f5f5f7]'}`} style={cityVariables}>
@@ -241,6 +306,7 @@ const App: React.FC = () => {
           notifications={notifications}
           onClearNotifications={clearNotifications}
           onSearch={setSearchQuery}
+          onNavigate={setActiveTab}
           onToggleTheme={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')}
           onOpenAI={() => setShowAIAssistant(true)}
           onOpenAccessibility={() => setShowAccessibility(p => !p)}
@@ -261,9 +327,37 @@ const App: React.FC = () => {
               {activeTab === 'inspection' && <CompanyInspection showToast={showToast} />}
               {activeTab === 'challenges' && <ChallengesList challenges={challenges} city={selectedCity} user={user} onSubmitIdea={handleChallengeIdeaSubmission} ideas={ideas} />}
               {activeTab === 'incubator' && <IdeaIncubator ideas={ideas} setIdeas={handleIdeasUpdate} isReadOnly={user.role === UserRole.CITIZEN} city={selectedCity} />}
-              {activeTab === 'community' && <Community ideas={ideas} setIdeas={handleIdeasUpdate} city={selectedCity} polls={polls} onVote={() => showToast('Glas uspješan!', 'success')} user={user} showToast={showToast} />}
+              {activeTab === 'community' && (
+                <Community
+                  ideas={ideas}
+                  setIdeas={handleIdeasUpdate}
+                  city={selectedCity}
+                  polls={polls}
+                  onVote={handleVotePoll}
+                  user={user}
+                  showToast={showToast}
+                />
+              )}
               {activeTab === 'factcheck' && <FactCheck city={selectedCity} />}
-              {activeTab === 'admin' && <AdminPortal ideas={ideas} setIdeas={handleIdeasUpdate} challenges={challenges} setChallenges={setChallenges} posts={posts} setPosts={setPosts} documentRequests={documentRequests} setDocumentRequests={setDocumentRequests} city={selectedCity} setCity={setSelectedCity} showToast={showToast} />}
+              {activeTab === 'admin' && (
+                <AdminPortal
+                  ideas={ideas}
+                  setIdeas={handleIdeasUpdate}
+                  challenges={challenges}
+                  setChallenges={setChallenges}
+                  posts={posts}
+                  setPosts={setPosts}
+                  polls={polls}
+                  onCreatePoll={handleCreatePoll}
+                  onDeletePoll={handleDeletePoll}
+                  onSetPollClosed={handleSetPollClosed}
+                  documentRequests={documentRequests}
+                  setDocumentRequests={setDocumentRequests}
+                  city={selectedCity}
+                  setCity={setSelectedCity}
+                  showToast={showToast}
+                />
+              )}
               {activeTab === 'account' && <UserAccount user={user} setUser={setUser} city={selectedCity} showToast={showToast} />}
               {activeTab === 'vault' && <DigitalVault city={selectedCity} user={user || undefined} documentRequests={documentRequests} onRequestDocument={handleDocumentRequest} />}
             </motion.div>
