@@ -38,7 +38,7 @@ const getCityString = (id: number) => {
   }
 };
 
-const getCityNumber = (cityString: string) => {
+export const getCityNumber = (cityString: string) => {
     switch(cityString) {
         case 'split': return 2;
         case 'rijeka': return 3;
@@ -576,6 +576,18 @@ export const communityAPI = {
           };
       } catch(e) {
           console.error("Error adding comment:", e);
+          throw e;
+      }
+  },
+  deletePost: async (postId: string): Promise<void> => {
+      try {
+          const postRef = doc(db, "posts", postId);
+          await updateDoc(postRef, {
+              content: "[Obrisano]",
+              authorName: "[Brisan]"
+          });
+      } catch(e) {
+          console.error("Error deleting post:", e);
           throw e;
       }
   }

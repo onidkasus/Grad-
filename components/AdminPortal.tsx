@@ -722,7 +722,7 @@ const AdminPortal: React.FC<AdminPortalProps> = ({ ideas, setIdeas, challenges, 
                         type="text" 
                         value={newChallenge.title}
                         onChange={e => setNewChallenge({...newChallenge, title: e.target.value})}
-                        className="w-full p-4 bg-gray-50 rounded-xl font-bold border-none focus:ring-2 focus:ring-blue-500 text-black" 
+                        className="w-full p-4 bg-gray-50 rounded-xl font-bold border-none focus:ring-2 focus:ring-blue-500" 
                         placeholder="Naziv izazova..."
                       />
                   </div>
@@ -731,7 +731,7 @@ const AdminPortal: React.FC<AdminPortalProps> = ({ ideas, setIdeas, challenges, 
                       <textarea 
                         value={newChallenge.description}
                         onChange={e => setNewChallenge({...newChallenge, description: e.target.value})}
-                        className="w-full p-4 bg-gray-50 rounded-xl font-medium border-none focus:ring-2 focus:ring-blue-500 h-24 resize-none text-black" 
+                        className="w-full p-4 bg-gray-50 rounded-xl font-medium border-none focus:ring-2 focus:ring-blue-500 h-24 resize-none" 
                         placeholder="Detalji..."
                       />
                   </div>
@@ -741,7 +741,7 @@ const AdminPortal: React.FC<AdminPortalProps> = ({ ideas, setIdeas, challenges, 
                         <select
                             value={newChallenge.category}
                             onChange={e => setNewChallenge({...newChallenge, category: e.target.value as Category})}
-                            className="w-full p-4 bg-gray-50 rounded-xl font-bold border-none focus:ring-2 focus:ring-blue-500 text-black"
+                            className="w-full p-4 bg-gray-50 rounded-xl font-bold border-none focus:ring-2 focus:ring-blue-500"
                         >
                             {Object.values(Category).map(c => <option key={c} value={c}>{c}</option>)}
                         </select>
@@ -751,7 +751,7 @@ const AdminPortal: React.FC<AdminPortalProps> = ({ ideas, setIdeas, challenges, 
                         <select
                             value={newChallenge.priority}
                             onChange={e => setNewChallenge({...newChallenge, priority: e.target.value as any})}
-                            className="w-full p-4 bg-gray-50 rounded-xl font-bold border-none focus:ring-2 focus:ring-blue-500 text-black"
+                            className="w-full p-4 bg-gray-50 rounded-xl font-bold border-none focus:ring-2 focus:ring-blue-500"
                         >
                             <option value="Nisko">Nisko</option>
                             <option value="Srednje">Srednje</option>
@@ -767,7 +767,7 @@ const AdminPortal: React.FC<AdminPortalProps> = ({ ideas, setIdeas, challenges, 
                             type="text" 
                             value={newChallenge.fund}
                             onChange={e => setNewChallenge({...newChallenge, fund: e.target.value})}
-                            className="w-full p-4 bg-gray-50 rounded-xl font-bold border-none focus:ring-2 focus:ring-blue-500 text-black" 
+                            className="w-full p-4 bg-gray-50 rounded-xl font-bold border-none focus:ring-2 focus:ring-blue-500" 
                             placeholder="e.g. 50.000 €"
                         />
                     </div>
@@ -826,7 +826,7 @@ const AdminPortal: React.FC<AdminPortalProps> = ({ ideas, setIdeas, challenges, 
                         type="text" 
                         value={newPost.title}
                         onChange={e => setNewPost({...newPost, title: e.target.value})}
-                        className="w-full p-4 bg-gray-50 rounded-xl font-bold border-none focus:ring-2 focus:ring-blue-500 text-black" 
+                        className="w-full p-4 bg-gray-50 rounded-xl font-bold border-none focus:ring-2 focus:ring-blue-500" 
                         placeholder="Naslov objave..."
                       />
                   </div>
@@ -835,7 +835,7 @@ const AdminPortal: React.FC<AdminPortalProps> = ({ ideas, setIdeas, challenges, 
                       <textarea 
                         value={newPost.content}
                         onChange={e => setNewPost({...newPost, content: e.target.value})}
-                        className="w-full p-4 bg-gray-50 rounded-xl font-medium border-none focus:ring-2 focus:ring-blue-500 h-32 resize-none text-black" 
+                        className="w-full p-4 bg-gray-50 rounded-xl font-medium border-none focus:ring-2 focus:ring-blue-500 h-32 resize-none" 
                         placeholder="Objavi važnuu poruku za građane..."
                       />
                   </div>
